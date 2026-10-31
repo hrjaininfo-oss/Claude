@@ -1,0 +1,360 @@
+<title>Claude Video Editor</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,700&display=swap">
+<style>
+/* Layout: editing-suite — scene bin (left), program monitor (centre), inspector (right), timeline under the monitor. Single committed graphite look. */
+:root{
+  --bg:#17191d; --panel:#1f2227; --raise:#2a2e35; --line:#353a42;
+  --fg:#e9e7e2; --dim:#9a9ea6; --accent:#e0a458; --accent-ink:#1b1408; --danger:#e07a6a;
+  --ui:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font:14px/1.45 var(--ui);}
+.app{min-height:100%;display:flex;flex-direction:column;gap:12px;padding-block:12px 20px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+header h1{font:600 16px var(--ui);margin:0;letter-spacing:.01em;display:flex;align-items:center;gap:8px}
+header h1 .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
+.spacer{flex:1}
+.grid{display:grid;grid-template-columns:240px minmax(0,1fr) 300px;gap:12px;align-items:start}
+@media (max-width:1050px){.grid{grid-template-columns:minmax(0,1fr) 300px}.bin{grid-column:1/-1;order:3}}
+@media (max-width:720px){.grid{grid-template-columns:minmax(0,1fr)}.bin{order:2}.insp{order:3}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;min-width:0}
+.ph{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.ph h2{margin:0;font:600 11px var(--ui);text-transform:uppercase;letter-spacing:.09em;color:var(--dim)}
+.pb{padding:12px;display:flex;flex-direction:column;gap:12px}
+button,select,input,textarea{font:inherit;color:var(--fg)}
+button{background:var(--raise);border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer}
+button:hover{border-color:#4a505a}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,.scene:focus-visible,.block:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+button.icon{padding:4px 7px;font-size:12px;line-height:1}
+button.danger:hover{border-color:var(--danger);color:var(--danger)}
+button:disabled{opacity:.45;cursor:default}
+select,input[type=text],input[type=number],textarea{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;width:100%}
+textarea{resize:vertical;min-height:120px;line-height:1.5}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--dim)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.scenes{list-style:none;margin:0;padding:6px;display:flex;flex-direction:column;gap:4px}
+.scene{display:grid;grid-template-columns:26px minmax(0,1fr);gap:4px 8px;padding:8px;border-radius:6px;border:1px solid transparent;cursor:pointer}
+.scene:hover{background:var(--raise)}
+.scene.sel{background:var(--raise);border-color:var(--accent)}
+.scene .n{font:500 12px var(--mono);color:var(--dim);padding-top:1px}
+.scene .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.scene .m{grid-column:2;font:12px var(--mono);color:var(--dim)}
+.scene .acts{grid-column:2;display:flex;gap:4px;flex-wrap:wrap}
+.monitor{padding:12px;display:flex;flex-direction:column;gap:10px}
+.stage{background:#0e0f12;border-radius:6px;display:flex;justify-content:center;align-items:center;padding:8px;min-height:200px}
+canvas#cv{display:block;max-width:100%;max-height:62vh;height:auto;border-radius:3px;box-shadow:0 0 0 1px var(--line)}
+.transport{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tc{font:500 13px var(--mono);font-variant-numeric:tabular-nums;color:var(--dim)}
+.tc b{color:var(--fg);font-weight:500}
+input[type=range]{flex:1;min-width:120px;accent-color:var(--accent)}
+.timeline{position:relative;display:flex;height:44px;border-radius:6px;overflow:hidden;background:var(--bg);border:1px solid var(--line)}
+.block{position:relative;border-right:1px solid var(--line);padding:5px 7px;font-size:11px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer;color:var(--dim);min-width:0}
+.block.sel{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--fg)}
+.block .bt{font:11px var(--mono)}
+.playhead{position:absolute;top:0;bottom:0;width:2px;background:var(--accent);pointer-events:none}
+.hint{font-size:12px;color:var(--dim);margin:0}
+.thumb{display:flex;gap:8px;align-items:center}
+.thumb img{width:64px;height:40px;object-fit:cover;border-radius:4px;border:1px solid var(--line)}
+.status{font-size:12px;color:var(--dim);min-height:1.2em}
+.status.err{color:var(--danger)}
+.check{display:flex;align-items:center;gap:8px;font-size:13px}
+details summary{cursor:pointer;color:var(--dim);font-size:12px}
+.ex{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.ex textarea{min-height:90px;font:12px var(--mono)}
+video#out{width:100%;border-radius:6px;background:#000}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="app">
+  <header>
+    <h1><span class="dot" aria-hidden="true"></span>Claude Video Editor</h1>
+    <span class="hint">Edit the scenes, preview, then export.</span>
+    <span class="spacer"></span>
+    <button id="reset" type="button">Reset to sample</button>
+    <button id="export" class="primary" type="button">Export video</button>
+  </header>
+
+  <div class="grid">
+    <section class="panel bin" aria-label="Scenes">
+      <div class="ph"><h2>Scenes</h2><button id="add" type="button" class="icon">+ Add scene</button></div>
+      <ul class="scenes" id="scenes"></ul>
+    </section>
+
+    <section class="panel monitor" aria-label="Preview">
+      <div class="stage"><canvas id="cv" width="1280" height="720"></canvas></div>
+      <div class="transport">
+        <button id="play" type="button" aria-label="Play">▶ Play</button>
+        <span class="tc"><b id="cur">00:00.0</b> / <span id="tot">00:00.0</span></span>
+        <input id="scrub" type="range" min="0" max="1000" value="0" step="1" aria-label="Playhead position">
+      </div>
+      <div class="timeline" id="timeline"><div class="playhead" id="ph"></div></div>
+      <p class="hint">Space plays or pauses. Click a block on the timeline to jump to that scene.</p>
+      <div id="outwrap" hidden>
+        <video id="out" controls playsinline></video>
+      </div>
+      <div class="status" id="status" role="status"></div>
+    </section>
+
+    <aside class="panel insp" aria-label="Inspector">
+      <div class="ph"><h2>Scene <span id="snum"></span></h2></div>
+      <div class="pb">
+        <label class="f">Layout
+          <select id="layout">
+            <option value="title">Title card</option>
+            <option value="list">Heading + points</option>
+            <option value="photo">Full-frame photo</option>
+          </select>
+        </label>
+        <label class="f">Heading<input id="heading" type="text"></label>
+        <label class="f"><span id="lineslabel">Points (one per line)</span><textarea id="lines"></textarea></label>
+        <div class="row2">
+          <label class="f">Duration (seconds)<input id="dur" type="number" min="1" max="60" step="0.5"></label>
+          <label class="f">Text animation
+            <select id="anim"><option value="rise">Fade &amp; rise</option><option value="fade">Fade</option><option value="none">None</option></select>
+          </label>
+        </div>
+        <div class="f" style="display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:12px;color:var(--dim)">Photo</span>
+          <div class="thumb"><img id="thumb" alt="" hidden><input id="img" type="file" accept="image/*" aria-label="Choose photo"></div>
+          <button id="rmimg" type="button" class="icon danger" hidden>Remove photo</button>
+        </div>
+      </div>
+      <div class="ph" style="border-top:1px solid var(--line)"><h2>Project</h2></div>
+      <div class="pb">
+        <div class="row2">
+          <label class="f">Format
+            <select id="aspect"><option value="16:9">16:9 · YouTube</option><option value="9:16">9:16 · Reels/Shorts</option><option value="1:1">1:1 · Square</option></select>
+          </label>
+          <label class="f">Colours
+            <select id="palette"><option value="cream">Cream</option><option value="night">Night</option><option value="ocean">Ocean</option><option value="paper">Paper</option></select>
+          </label>
+        </div>
+        <div class="row2">
+          <label class="f">Heading font
+            <select id="font"><option value="serif">Serif</option><option value="sans">Sans</option></select>
+          </label>
+          <label class="f">Accent colour<input id="accent" type="color" style="height:36px;padding:2px"></label>
+        </div>
+        <label class="check"><input id="bar" type="checkbox"> Show progress bar</label>
+        <label class="check"><input id="logo" type="checkbox"> Show spark logo</label>
+        <label class="f">Watermark text (optional)<input id="wm" type="text" placeholder="e.g. your firm name"></label>
+        <details>
+          <summary>Scene data (JSON)</summary>
+          <div class="ex">
+            <p class="hint">Copy this into <code>video/scenes.json</code> to render an MP4 with the repo script, or paste JSON here and load it.</p>
+            <textarea id="json" spellcheck="false" aria-label="Scene data JSON"></textarea>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="copy" type="button">Copy JSON</button><button id="load" type="button">Load JSON</button></div>
+          </div>
+        </details>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(()=>{
+const PALETTES={
+  cream:{bg:"#FAF7F2",ink:"#1F1E1D",muted:"#6E6962",accent:"#CC785C"},
+  night:{bg:"#14161B",ink:"#F2EFE9",muted:"#9A968F",accent:"#E3A46F"},
+  ocean:{bg:"#0F2A3D",ink:"#F4F7FA",muted:"#9FB3C2",accent:"#5FC2B8"},
+  paper:{bg:"#FFFFFF",ink:"#141414",muted:"#5F5F5F",accent:"#2F5BEA"}
+};
+const SIZES={"16:9":[1280,720],"9:16":[720,1280],"1:1":[1080,1080]};
+const SAMPLE={aspect:"16:9",palette:"cream",accent:"#CC785C",font:"serif",bar:true,logo:true,watermark:"",scenes:[
+ {layout:"title",heading:"Meet Claude",lines:["An AI assistant built by Anthropic"],dur:5,anim:"rise"},
+ {layout:"list",heading:"What is Claude?",lines:["A helpful, honest and harmless AI","that reads, writes, reasons and codes","alongside you."],dur:7,anim:"rise"},
+ {layout:"list",heading:"What Claude can do",lines:["• Draft letters, reports and replies","• Summarise long documents and PDFs","• Analyse spreadsheets and figures","• Write, review and debug code","• Research and compare information"],dur:8,anim:"rise"},
+ {layout:"list",heading:"Claude for CAs & tax professionals",lines:["• Analyse GST / Income-tax notices","• Draft point-wise submissions","• Reconcile GSTR-1, 3B, 2B and 26AS/AIS","• Prepare financial statements from Tally TB","• Build checklists and annexure lists"],dur:8,anim:"rise"},
+ {layout:"list",heading:"Where you can use Claude",lines:["• claude.ai on web, desktop and mobile","• Claude Code for software work","• The Claude API for your own apps"],dur:7,anim:"rise"},
+ {layout:"list",heading:"How to work well with Claude",lines:["1. Give clear context and documents","2. Say exactly what output you need","3. Review, verify and refine","Claude assists — you stay the expert."],dur:7,anim:"rise"},
+ {layout:"title",heading:"Claude",lines:["Think it through, together."],dur:5,anim:"rise"}
+]};
+const KEY="claude-video-editor-v1";
+const clone=o=>JSON.parse(JSON.stringify(o));
+let P; try{P=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+if(!P||!Array.isArray(P.scenes)||!P.scenes.length)P=clone(SAMPLE);
+let sel=0,cur=0,playing=false,lastTs=0,exporting=false;
+const imgCache=new Map();
+const $=id=>document.getElementById(id);
+const cv=$("cv"),ctx=cv.getContext("2d");
+
+function save(){try{localStorage.setItem(KEY,JSON.stringify(P))}catch(e){try{const lite=clone(P);lite.scenes.forEach(s=>delete s.image);localStorage.setItem(KEY,JSON.stringify(lite))}catch(_){}}}
+const total=()=>P.scenes.reduce((a,s)=>a+(+s.dur||0),0);
+const fmt=t=>{const m=Math.floor(t/60),s=t-m*60;return String(m).padStart(2,"0")+":"+s.toFixed(1).padStart(4,"0")};
+const ease=t=>1-Math.pow(1-Math.min(Math.max(t,0),1),3);
+function getImg(src){if(!src)return null;let im=imgCache.get(src);if(!im){im=new Image();im.onload=()=>{if(!playing)draw(cur)};im.src=src;imgCache.set(src,im)}return im.complete&&im.naturalWidth?im:null}
+function pal(){const p={...PALETTES[P.palette]||PALETTES.cream};if(P.accent)p.accent=P.accent;return p}
+function headFont(px){return P.font==="sans"?`600 ${px}px "IBM Plex Sans", sans-serif`:`700 ${px}px "Source Serif 4", Georgia, serif`}
+const bodyFont=px=>`400 ${px}px "IBM Plex Sans", sans-serif`;
+function wrap(text,maxW){const words=String(text).split(/\s+/);const out=[];let line="";for(const w of words){const test=line?line+" "+w:w;if(ctx.measureText(test).width>maxW&&line){out.push(line);line=w}else line=test}if(line)out.push(line);return out.length?out:[""]}
+
+function spark(cx,cy,r,t,col,a){ctx.save();ctx.globalAlpha=a;ctx.strokeStyle=col;ctx.lineCap="round";ctx.lineWidth=Math.max(3,r/6);const rot=t*0.6;
+ for(let k=0;k<8;k++){const ang=rot+k*Math.PI/4,L=r*(k%2?0.65:1)*ease(t*1.5);ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+L*Math.cos(ang),cy+L*Math.sin(ang));ctx.stroke()}ctx.restore()}
+
+function drawScene(s,t){
+ const W=cv.width,H=cv.height,u=Math.min(W,H)/720,c=pal(),portrait=H>W;
+ const A=k=>s.anim==="none"?1:ease((t-k)*1.5), dy=k=>s.anim==="rise"?(1-A(k))*24*u:0;
+ ctx.fillStyle=c.bg;ctx.fillRect(0,0,W,H);
+ ctx.textBaseline="alphabetic";
+ const lines=(s.lines||[]).filter(l=>l.trim()!=="");
+ const im=getImg(s.image);
+ if(s.layout==="photo"){
+   if(im){const sc=Math.max(W/im.naturalWidth,H/im.naturalHeight)*(1+0.04*t/Math.max(s.dur,1));const iw=im.naturalWidth*sc,ih=im.naturalHeight*sc;ctx.drawImage(im,(W-iw)/2,(H-ih)/2,iw,ih)}
+   else{ctx.fillStyle=c.muted;ctx.globalAlpha=.25;ctx.fillRect(0,0,W,H);ctx.globalAlpha=1;ctx.fillStyle=c.muted;ctx.font=bodyFont(26*u);ctx.textAlign="center";ctx.fillText("Add a photo in the inspector",W/2,H/2)}
+   const g=ctx.createLinearGradient(0,H*0.45,0,H);g.addColorStop(0,"rgba(0,0,0,0)");g.addColorStop(1,"rgba(0,0,0,0.78)");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+   const mx=(portrait?56:90)*u;ctx.textAlign="left";
+   ctx.font=bodyFont(30*u);const sub=lines.flatMap(l=>wrap(l,W-2*mx));
+   let y=H-(portrait?110:70)*u-sub.length*42*u;
+   ctx.font=headFont(60*u);const hl=wrap(s.heading||"",W-2*mx);y-=(hl.length-1)*68*u;
+   ctx.globalAlpha=A(0);ctx.fillStyle="#fff";hl.forEach((l,i)=>ctx.fillText(l,mx,y+i*68*u+dy(0)));
+   ctx.fillStyle=c.accent;ctx.fillRect(mx,y+(hl.length-1)*68*u+22*u,160*u*ease(t),5*u);
+   ctx.font=bodyFont(30*u);ctx.fillStyle="rgba(255,255,255,.88)";
+   sub.forEach((l,i)=>{ctx.globalAlpha=A(0.5+i*0.3);ctx.fillText(l,mx,y+(hl.length-1)*68*u+70*u+i*42*u+dy(0.5+i*0.3))});
+   ctx.globalAlpha=1;return;
+ }
+ if(s.layout==="title"){
+   if(im){const sc=Math.max(W/im.naturalWidth,H/im.naturalHeight);ctx.globalAlpha=.18;ctx.drawImage(im,(W-im.naturalWidth*sc)/2,(H-im.naturalHeight*sc)/2,im.naturalWidth*sc,im.naturalHeight*sc);ctx.globalAlpha=1}
+   const hasLogo=P.logo;
+   ctx.font=headFont(84*u);const hl=wrap(s.heading||"",W-120*u);
+   ctx.font=bodyFont(34*u);const sub=lines.flatMap(l=>wrap(l,W-120*u));
+   const blockH=(hasLogo?150*u:0)+hl.length*92*u+sub.length*46*u+20*u;
+   let y=(H-blockH)/2;
+   if(hasLogo){spark(W/2,y+60*u,60*u,t,c.accent,1);y+=150*u}
+   ctx.textAlign="center";ctx.font=headFont(84*u);ctx.fillStyle=c.ink;ctx.globalAlpha=A(0);
+   hl.forEach((l,i)=>ctx.fillText(l,W/2,y+70*u+i*92*u+dy(0)));y+=hl.length*92*u+20*u;
+   ctx.font=bodyFont(34*u);ctx.fillStyle=c.muted;
+   sub.forEach((l,i)=>{ctx.globalAlpha=A(0.6+i*0.3);ctx.fillText(l,W/2,y+30*u+i*46*u)});
+   ctx.globalAlpha=1;return;
+ }
+ // list
+ const mx=(portrait?56:160)*u,top=(portrait?150:110)*u;
+ if(P.logo)spark(portrait?mx+28*u:110*u,portrait?top-90*u:top,28*u,t,c.accent,1);
+ ctx.textAlign="left";ctx.font=headFont(50*u);ctx.fillStyle=c.ink;
+ const hl=wrap(s.heading||"",W-mx-40*u);ctx.textBaseline="middle";
+ hl.forEach((l,i)=>ctx.fillText(l,mx,top+i*58*u));ctx.textBaseline="alphabetic";
+ const ul=top+(hl.length-1)*58*u+40*u;ctx.fillStyle=c.accent;ctx.fillRect(mx,ul,220*u*ease(t),5*u);
+ ctx.font=bodyFont(34*u);let y=ul+90*u;
+ lines.forEach((l,i)=>{const a=A(0.5+i*0.6);ctx.globalAlpha=a;ctx.fillStyle=c.ink;const off=s.anim==="rise"?(1-a)*30*u:0;
+   wrap(l,W-mx-40*u-off).forEach((w,j)=>{ctx.fillText(w,mx+off+(j?32*u:0),y);y+=46*u});y+=24*u});
+ ctx.globalAlpha=1;
+}
+
+function draw(T){
+ const W=cv.width,H=cv.height,c=pal(),u=Math.min(W,H)/720,tot=total();
+ let acc=0,i=0;for(;i<P.scenes.length-1;i++){if(T<acc+(+P.scenes[i].dur))break;acc+=+P.scenes[i].dur}
+ const s=P.scenes[i],t=Math.max(0,T-acc),d=+s.dur;
+ drawScene(s,t);
+ const fade=Math.min(1,t/0.4,(d-t)/0.4);
+ if(fade<1){ctx.globalAlpha=1-Math.max(fade,0);ctx.fillStyle=c.bg;ctx.fillRect(0,0,W,H);ctx.globalAlpha=1}
+ if(P.watermark){ctx.font=bodyFont(20*u);ctx.textAlign="right";ctx.fillStyle=s.layout==="photo"?"rgba(255,255,255,.7)":c.muted;ctx.fillText(P.watermark,W-28*u,H-26*u)}
+ if(P.bar){ctx.fillStyle=c.accent;ctx.fillRect(0,H-6*u,W*(tot?T/tot:0),6*u)}
+ return i;
+}
+
+function sceneAt(T){let acc=0;for(let i=0;i<P.scenes.length;i++){acc+=+P.scenes[i].dur;if(T<acc)return i}return P.scenes.length-1}
+function startOf(i){return P.scenes.slice(0,i).reduce((a,s)=>a+(+s.dur),0)}
+
+function renderBin(){
+ const ul=$("scenes");ul.innerHTML="";
+ P.scenes.forEach((s,i)=>{
+  const li=document.createElement("li");li.className="scene"+(i===sel?" sel":"");li.tabIndex=0;
+  const n=document.createElement("span");n.className="n";n.textContent=String(i+1).padStart(2,"0");
+  const t=document.createElement("span");t.className="t";t.textContent=s.heading||"(untitled)";
+  const m=document.createElement("span");m.className="m";m.textContent={title:"Title",list:"Points",photo:"Photo"}[s.layout]+" · "+(+s.dur).toFixed(1)+"s";
+  li.append(n,t,m);
+  if(i===sel){const a=document.createElement("span");a.className="acts";
+   const mk=(txt,lbl,fn,dis,cls)=>{const b=document.createElement("button");b.type="button";b.className="icon"+(cls?" "+cls:"");b.textContent=txt;b.setAttribute("aria-label",lbl);b.disabled=!!dis;b.onclick=e=>{e.stopPropagation();fn()};a.append(b)};
+   mk("↑","Move up",()=>move(-1),i===0);mk("↓","Move down",()=>move(1),i===P.scenes.length-1);
+   mk("Duplicate","Duplicate scene",dup);mk("Delete","Delete scene",del,P.scenes.length<2,"danger");li.append(a)}
+  li.onclick=()=>select(i,true);li.onkeydown=e=>{if(e.key==="Enter"&&e.target===li)select(i,true)};
+  ul.append(li)});
+}
+function renderTimeline(){
+ const tl=$("timeline"),tot=total();[...tl.querySelectorAll(".block")].forEach(b=>b.remove());
+ P.scenes.forEach((s,i)=>{const b=document.createElement("div");b.className="block"+(i===sel?" sel":"");b.style.flex=`${s.dur} 1 0`;b.tabIndex=0;b.setAttribute("role","button");
+  b.innerHTML=`<div class="bt"></div><div class="bh"></div>`;b.children[0].textContent=String(i+1).padStart(2,"0")+" · "+(+s.dur).toFixed(1)+"s";b.children[1].textContent=s.heading;
+  b.onclick=()=>select(i,true);b.onkeydown=e=>{if(e.key==="Enter")select(i,true)};tl.insertBefore(b,$("ph"))});
+ $("tot").textContent=fmt(tot);
+}
+function renderInspector(){
+ const s=P.scenes[sel];$("snum").textContent=String(sel+1).padStart(2,"0");
+ $("layout").value=s.layout;$("heading").value=s.heading;$("lines").value=(s.lines||[]).join("\n");$("dur").value=s.dur;$("anim").value=s.anim||"rise";
+ $("lineslabel").textContent=s.layout==="list"?"Points (one per line)":"Subtitle (one line per row)";
+ $("thumb").hidden=!s.image;if(s.image)$("thumb").src=s.image;$("rmimg").hidden=!s.image;$("img").value="";
+ $("aspect").value=P.aspect;$("palette").value=P.palette;$("font").value=P.font;$("accent").value=P.accent||pal().accent;$("bar").checked=!!P.bar;$("logo").checked=!!P.logo;$("wm").value=P.watermark||"";
+}
+function updatePlayhead(){const tot=total();$("ph").style.left=`calc(${tot?cur/tot*100:0}% - 1px)`;$("cur").textContent=fmt(cur);$("scrub").value=tot?Math.round(cur/tot*1000):0}
+function refresh(all){save();if(all){renderBin();renderInspector()}renderTimeline();updatePlayhead();if(!playing)draw(cur);$("json").value=exportJSON()}
+function select(i,seek){sel=i;if(seek){cur=startOf(i)+Math.min(4,P.scenes[i].dur*0.6)}refresh(true)}
+function move(d){const j=sel+d;if(j<0||j>=P.scenes.length)return;[P.scenes[sel],P.scenes[j]]=[P.scenes[j],P.scenes[sel]];select(j,true)}
+function dup(){P.scenes.splice(sel+1,0,clone(P.scenes[sel]));select(sel+1,true)}
+function del(){if(P.scenes.length<2)return;P.scenes.splice(sel,1);select(Math.min(sel,P.scenes.length-1),true)}
+$("add").onclick=()=>{P.scenes.splice(sel+1,0,{layout:"list",heading:"New scene",lines:["• First point","• Second point"],dur:6,anim:"rise"});select(sel+1,true)};
+
+const S=()=>P.scenes[sel];
+$("layout").onchange=e=>{S().layout=e.target.value;refresh(true)};
+$("heading").oninput=e=>{S().heading=e.target.value;refresh(false);const t=document.querySelector(".scene.sel .t");if(t)t.textContent=e.target.value||"(untitled)"};
+$("lines").oninput=e=>{S().lines=e.target.value.split("\n");refresh(false)};
+$("dur").onchange=e=>{let v=Math.min(60,Math.max(1,parseFloat(e.target.value)||5));S().dur=v;e.target.value=v;cur=Math.min(cur,total());refresh(true)};
+$("anim").onchange=e=>{S().anim=e.target.value;refresh(false)};
+$("img").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const max=1600,sc=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement("canvas");c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);c.getContext("2d").drawImage(im,0,0,c.width,c.height);S().image=c.toDataURL("image/jpeg",0.85);if(S().layout==="list")S().layout="photo";refresh(true)};im.src=r.result};r.readAsDataURL(f)};
+$("rmimg").onclick=()=>{delete S().image;refresh(true)};
+function setSize(){const [w,h]=SIZES[P.aspect]||SIZES["16:9"];cv.width=w;cv.height=h}
+$("aspect").onchange=e=>{P.aspect=e.target.value;setSize();refresh(false)};
+$("palette").onchange=e=>{P.palette=e.target.value;P.accent=PALETTES[P.palette].accent;refresh(true)};
+$("font").onchange=e=>{P.font=e.target.value;refresh(false)};
+$("accent").oninput=e=>{P.accent=e.target.value;refresh(false)};
+$("bar").onchange=e=>{P.bar=e.target.checked;refresh(false)};
+$("logo").onchange=e=>{P.logo=e.target.checked;refresh(false)};
+$("wm").oninput=e=>{P.watermark=e.target.value;refresh(false)};
+$("reset").onclick=()=>{if($("reset").dataset.armed){P=clone(SAMPLE);setSize();sel=0;cur=0;$("reset").textContent="Reset to sample";delete $("reset").dataset.armed;refresh(true);status("Reset to the sample video.")}else{$("reset").dataset.armed="1";$("reset").textContent="Click again to reset";setTimeout(()=>{if($("reset").dataset.armed){delete $("reset").dataset.armed;$("reset").textContent="Reset to sample"}},3000)}};
+
+function exportJSON(){const o=clone(P);o.scenes.forEach(s=>{if(s.image)s.image="(photo — re-add in editor or set a file path)"});return JSON.stringify(o,null,2)}
+$("copy").onclick=async()=>{const ta=$("json");try{await navigator.clipboard.writeText(ta.value);status("Copied scene JSON.")}catch(e){ta.focus();ta.select();status("Text selected — press Ctrl/Cmd+C to copy.")}};
+$("load").onclick=()=>{try{const o=JSON.parse($("json").value);if(!Array.isArray(o.scenes)||!o.scenes.length)throw new Error("needs a non-empty \"scenes\" list");
+  o.scenes.forEach(s=>{if(typeof s.image==="string"&&!s.image.startsWith("data:"))delete s.image;s.dur=+s.dur||5;s.lines=Array.isArray(s.lines)?s.lines:[];s.layout=["title","list","photo"].includes(s.layout)?s.layout:"list"});
+  P={...clone(SAMPLE),...o};setSize();sel=0;cur=0;refresh(true);status("Loaded scenes from JSON.")}catch(e){status("Couldn't load that JSON: "+e.message,true)}};
+
+function status(m,err){const s=$("status");s.textContent=m;s.classList.toggle("err",!!err)}
+
+function tick(ts){if(!playing)return;const dt=lastTs?(ts-lastTs)/1000:0;lastTs=ts;cur+=dt;const tot=total();
+ if(cur>=tot){cur=tot;if(exporting){draw(cur);finishExport();return}setPlaying(false)}
+ const i=draw(cur);if(i!==sel&&!exporting){sel=i;renderBin();renderInspector();renderTimeline()}updatePlayhead();if(playing)requestAnimationFrame(tick)}
+function setPlaying(v){playing=v;$("play").textContent=v?"❚❚ Pause":"▶ Play";$("play").setAttribute("aria-label",v?"Pause":"Play");if(v){if(cur>=total()-0.01)cur=0;lastTs=0;requestAnimationFrame(tick)}else draw(cur)}
+$("play").onclick=()=>{if(!exporting)setPlaying(!playing)};
+$("scrub").oninput=e=>{cur=total()*e.target.value/1000;const i=sceneAt(cur);if(i!==sel){sel=i;renderBin();renderInspector();renderTimeline()}updatePlayhead();if(!playing)draw(cur)};
+document.addEventListener("keydown",e=>{if(e.code==="Space"&&!/INPUT|TEXTAREA|SELECT|BUTTON/.test(e.target.tagName)&&!e.target.closest(".scene,.block")){e.preventDefault();if(!exporting)setPlaying(!playing)}});
+
+// Export
+let rec,chunks,mime,ext;
+function pickMime(){if(!window.MediaRecorder)return null;for(const [m,x] of [["video/mp4;codecs=avc1","mp4"],["video/mp4","mp4"],["video/webm;codecs=vp9","webm"],["video/webm;codecs=vp8","webm"],["video/webm","webm"]])if(MediaRecorder.isTypeSupported(m))return [m,x];return null}
+$("export").onclick=()=>{
+ if(exporting)return;const pm=pickMime();if(!pm||!cv.captureStream){status("This browser can't record video. Try Chrome, Edge or Firefox on a computer.",true);return}
+ [mime,ext]=pm;chunks=[];const stream=cv.captureStream(30);
+ try{rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:6e6})}catch(e){status("Recording failed to start: "+e.message,true);return}
+ rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};rec.onstop=onRecorded;
+ exporting=true;$("export").disabled=true;$("export").textContent="Recording…";status(`Recording in real time (${fmt(total())}). Keep this tab visible.`);
+ cur=0;draw(0);rec.start(250);playing=true;lastTs=0;$("play").textContent="❚❚ Pause";requestAnimationFrame(tick)};
+function finishExport(){playing=false;setTimeout(()=>rec.state!=="inactive"&&rec.stop(),200)}
+async function onRecorded(){
+ exporting=false;$("export").disabled=false;$("export").textContent="Export video";$("play").textContent="▶ Play";
+ const blob=new Blob(chunks,{type:mime.split(";")[0]});const url=URL.createObjectURL(blob);
+ $("outwrap").hidden=false;$("out").src=url;
+ const name=(P.scenes[0].heading||"video").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")+"."+ext;
+ status(`Recorded ${(blob.size/1048576).toFixed(1)} MB ${ext.toUpperCase()}. Preview it below the timeline.`);
+ let dl=null;try{dl=await window.claude?.use?.("downloads")}catch(e){}
+ if(!dl){status(`Recorded ${ext.toUpperCase()} — saving files isn't available in this view, but you can preview it here.`);return}
+ try{await dl.save({filename:name,data:blob});status(`Saved ${name}.`)}catch(e){status(e&&e.code==="declined"?"Save cancelled. Click Export video to record again.":"Couldn't save the file ("+(e&&e.code||"error")+").",true)}
+}
+
+setSize();
+document.fonts.load(headFont(40)).then(()=>document.fonts.load(bodyFont(30))).then(()=>document.fonts.load('600 40px "IBM Plex Sans"')).finally(()=>draw(cur));
+document.fonts.ready.then(()=>draw(cur));
+refresh(true);
+})();
+</script>
