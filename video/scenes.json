@@ -1,0 +1,90 @@
+{
+  "aspect": "16:9",
+  "palette": "cream",
+  "accent": "#CC785C",
+  "font": "serif",
+  "bar": true,
+  "logo": true,
+  "watermark": "",
+  "music": true,
+  "scenes": [
+    {
+      "layout": "title",
+      "heading": "Meet Claude",
+      "lines": [
+        "An AI assistant built by Anthropic"
+      ],
+      "dur": 5,
+      "anim": "rise"
+    },
+    {
+      "layout": "list",
+      "heading": "What is Claude?",
+      "lines": [
+        "A helpful, honest and harmless AI",
+        "that reads, writes, reasons and codes",
+        "alongside you."
+      ],
+      "dur": 7,
+      "anim": "rise"
+    },
+    {
+      "layout": "list",
+      "heading": "What Claude can do",
+      "lines": [
+        "• Draft letters, reports and replies",
+        "• Summarise long documents and PDFs",
+        "• Analyse spreadsheets and figures",
+        "• Write, review and debug code",
+        "• Research and compare information"
+      ],
+      "dur": 8,
+      "anim": "rise"
+    },
+    {
+      "layout": "list",
+      "heading": "Claude for CAs & tax professionals",
+      "lines": [
+        "• Analyse GST / Income-tax notices",
+        "• Draft point-wise submissions",
+        "• Reconcile GSTR-1, 3B, 2B and 26AS/AIS",
+        "• Prepare financial statements from Tally TB",
+        "• Build checklists and annexure lists"
+      ],
+      "dur": 8,
+      "anim": "rise"
+    },
+    {
+      "layout": "list",
+      "heading": "Where you can use Claude",
+      "lines": [
+        "• claude.ai on web, desktop and mobile",
+        "• Claude Code for software work",
+        "• The Claude API for your own apps"
+      ],
+      "dur": 7,
+      "anim": "rise"
+    },
+    {
+      "layout": "list",
+      "heading": "How to work well with Claude",
+      "lines": [
+        "1. Give clear context and documents",
+        "2. Say exactly what output you need",
+        "3. Review, verify and refine",
+        "Claude assists — you stay the expert."
+      ],
+      "dur": 7,
+      "anim": "rise"
+    },
+    {
+      "layout": "title",
+      "heading": "Claude",
+      "lines": [
+        "Think it through, together."
+      ],
+      "dur": 5,
+      "anim": "rise"
+    }
+  ]
+}
