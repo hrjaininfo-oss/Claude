@@ -112,6 +112,42 @@ def tts(text, voice, speed):
     return a
 
 
+# Character voices: Kokoro voice, speed, pitch shift in semitones. A story can override with "voices".
+VOICES = {
+    "narrator": ("hm_omega", 1.0, 0.0),
+    "hanuman":  ("hm_psi", 1.0, -1.5),
+    "ram":      ("hm_psi", 0.92, 0.0),
+    "lakshman": ("hm_omega", 1.0, 1.5),
+    "jambavan": ("hm_omega", 0.9, -4.0),
+    "vanar":    ("hm_psi", 1.08, 3.0),
+    "vanar2":   ("hm_omega", 1.08, 2.0),
+    "sage":     ("hm_omega", 0.88, -3.0),
+    "shabari":  ("hf_beta", 0.86, -2.0),
+    "squirrel": ("hf_alpha", 1.05, 5.0),
+}
+NAMES = {"hanuman": "हनुमान", "ram": "श्री राम", "lakshman": "लक्ष्मण", "jambavan": "जाम्बवान", "vanar": "वानर",
+         "sage": "ऋषि मतंग", "shabari": "शबरी", "squirrel": "गिलहरी"}
+NAME_COL = {"hanuman": (210, 70, 20), "ram": (40, 90, 200), "lakshman": (190, 140, 20), "jambavan": (110, 70, 40),
+            "vanar": (40, 140, 70), "sage": (230, 110, 0), "shabari": (130, 60, 150), "squirrel": (20, 140, 150)}
+
+
+def speak(text, prof):
+    """TTS in a character's voice; the pitch shift keeps the speaking speed."""
+    voice, speed, st = prof
+    r = 2 ** (st / 12)
+    a = tts(text, voice, round(min(2.0, max(0.5, speed / r)), 3))
+    if st:
+        n = int(len(a) / r); a = np.interp(np.arange(n) * r, np.arange(len(a)), a).astype(np.float32)
+    return a
+
+
+def envelope(a):
+    """Mouth opening per video frame (0..1) from the loudness of the speech."""
+    hop = SR // FPS; n = len(a) // hop + 1
+    e = np.array([np.sqrt(np.mean(a[i * hop:(i + 1) * hop] ** 2)) if i * hop < len(a) else 0 for i in range(n)])
+    return np.clip(e / (np.percentile(e, 90) + 1e-6), 0, 1)
+
+
 # ---------------------------------------------------------------- music & sfx
 def tone(freq, dur, harm=10, decay=1.5, bright=0.8):
     t = np.arange(int(dur * SR)) / SR
@@ -471,16 +507,26 @@ def main():
     scenes = story["scenes"]
     for si, sc in enumerate(scenes):
         s0 = cur; caps = []; lts = []
+        chars_ = sc.get("chars", [])
         for line in sc["lines"]:
-            a = tts(line, voice, speed); voice_parts.append((cur, a)); dur = len(a) / SR
-            lts.append((cur, cur + dur))
-            words = line.split(); wts = [word_weight(w) for w in words]; tot = sum(wts)
+            text, by = (line, None) if isinstance(line, str) else (line["text"], line.get("by"))
+            ci = None
+            if isinstance(by, int): ci = by
+            elif by: ci = next((i for i, c in enumerate(chars_) if c["who"] == by), None)
+            who = chars_[ci]["who"] if ci is not None else None
+            vkey = (chars_[ci].get("voice", who) if ci is not None else "narrator")
+            prof = tuple(story.get("voices", {}).get(vkey, VOICES.get(vkey, VOICES["narrator"])))
+            if vkey == "narrator" and "voices" not in story: prof = (voice, speed, 0.0)
+            a = speak(text, prof); voice_parts.append((cur, a)); dur = len(a) / SR
+            lts.append((cur, cur + dur, ci, envelope(a)))
+            label = who
+            words = text.split(); wts = [word_weight(w) for w in words]; tot = sum(wts)
             wt, acc = [], 0
             for w, x in zip(words, wts):
                 wt.append((cur + dur * acc / tot, cur + dur * (acc + x) / tot)); acc += x
             k = 0
             for ch in chunk_words(words):
-                caps.append((ch, wt[k:k + len(ch)])); k += len(ch)
+                caps.append((ch, wt[k:k + len(ch)], label)); k += len(ch)
             cur += dur + 0.22
         cur += 0.35
         timeline.append(dict(start=s0, end=cur, caps=caps, lines=lts))
@@ -516,16 +562,17 @@ def main():
     black = Image.new("RGB", (W, H), (0, 0, 0)); white = Image.new("RGB", (W, H), (255, 255, 255))
     char_cache = {}; cache_scene = [-1]
 
-    def char_frame(si, ci, c, act, phase, prog):
+    def char_frame(si, ci, c, act, phase, prog, mouth=0.0):
         """Pre-scaled, cropped character image + feet anchor, cached per scene."""
         if cache_scene[0] != si: char_cache.clear(); cache_scene[0] = si
         oneshot = act in ONE_SHOT
         qp = min(int(prog * 40), 16) if oneshot else 0
         qi = 0 if (oneshot and qp < 16) else int(phase * 12) % 12
-        key = (ci, act, qi, qp)
+        qm = int(round(mouth * 3))
+        key = (ci, act, qi, qp, qm)
         if key not in char_cache:
             _, _, _, sil_c, sun_c = THEMES[scenes[si]["bg"].get("theme", "dusk")]
-            im = character(c["who"], act, qi / 12, qp / 40, sil=sil_c, light=lerp(sun_c, (255, 255, 255), 0.2), stripes=c.get("stripes", False))
+            im = character(c["who"], act, qi / 12, qp / 40, sil=sil_c, light=lerp(sun_c, (255, 255, 255), 0.2), stripes=c.get("stripes", False), mouth=qm / 3)
             if c.get("flip"): im = ImageOps.mirror(im)
             f = c.get("h", 0.3) * (H if c.get("anim") == "fly" else BH) / 1000
             im = im.resize((max(1, int(im.width * f)), max(1, int(im.height * f))), Image.LANCZOS)
@@ -591,9 +638,9 @@ def main():
                 frame.paste(fgf, (0, 0), fgf)
             k_ = W / cw; x0, y0 = cx - cw / 2, cy - ch / 2
             li = 0
-            for j, (l0, _) in enumerate(tl["lines"]):
-                if t >= l0: li = j
-            l0, l1 = tl["lines"][li]; lprog = min(1.0, max(0.0, (t - l0) / max(l1 - l0, 0.1)))
+            for j, ln_ in enumerate(tl["lines"]):
+                if t >= ln_[0]: li = j
+            l0, l1, spk, env = tl["lines"][li]; lprog = min(1.0, max(0.0, (t - l0) / max(l1 - l0, 0.1)))
             for ci, c in enumerate(sc.get("chars", [])):
                 acts = c.get("act", "idle"); act = acts[min(li, len(acts) - 1)] if isinstance(acts, list) else acts
                 x = c.get("x", 0.5); sc_ = 1.0
@@ -605,7 +652,11 @@ def main():
                 if an == "grow":
                     g0 = tl["lines"][min(c.get("grow_line", 0), len(tl["lines"]) - 1)][0]
                     sc_ = 0.42 + 0.58 * ease((t - g0) / max(tl["end"] - g0, 0.1) / 0.7) if t >= g0 else 0.42
-                cim, ax, ay = char_frame(si, ci, c, act, (t / CYCLE.get(act, 2.0)) % 1.0, lprog)
+                mo = 0.0
+                if spk == ci and l0 <= t < l1:
+                    mo = float(env[min(int((t - l0) * FPS), len(env) - 1)])
+                    if act in ("idle", "namaste"): act = "talk" if c["who"] not in ("squirrel",) else act
+                cim, ax, ay = char_frame(si, ci, c, act, (t / CYCLE.get(act, 2.0)) % 1.0, lprog, mo)
                 if an == "fly":
                     q = min(1.0, lt / (dur * 0.9)); fx_ = (-0.1 + 1.2 * q) * W; fy_ = (0.85 - 0.75 * math.sin(math.pi * q * 0.9)) * H
                     ty = -(0.75 * math.sin(math.pi * (q + 0.01) * 0.9) - 0.75 * math.sin(math.pi * q * 0.9)) * H
@@ -653,7 +704,7 @@ def main():
                                     radius=20, fill=(255, 214, 0, int(240 * a)))
                 d.text((W / 2, y0 + li * 130), ln, font=FHOOK, fill=(20, 10, 0, int(255 * a)), anchor="mm")
         # captions
-        for words, wt in tl["caps"]:
+        for words, wt, label in tl["caps"]:
             c0, c1 = wt[0][0], wt[-1][1] + 0.12
             if c0 - 0.05 <= t < c1:
                 act = max([i for i, (a0, _) in enumerate(wt) if t >= a0] or [0])
@@ -662,6 +713,9 @@ def main():
                 if s != 1:
                     img = img.resize((max(1, int(img.width * s)), max(1, int(img.height * s))), Image.BILINEAR)
                 frame.paste(img, (int(W / 2 - img.width / 2), int(H * 0.64 - img.height / 2)), img)
+                if label:                                # who is speaking
+                    d = ImageDraw.Draw(frame, "RGBA")
+                    pill(d, W / 2, H * 0.64 - img.height / 2 - 34, NAMES.get(label, label), FTAG, (255, 255, 255), NAME_COL.get(label, (60, 60, 60)) + (235,))
                 break
         # outro
         if t > T - 2.6:

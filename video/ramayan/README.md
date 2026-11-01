@@ -23,7 +23,10 @@ python3 video/ramayan/make_short.py video/ramayan/stories/hanuman.json --preview
 On the first run it downloads the offline Hindi voice model (about 350 MB, into `.models/`) and the fonts (into `fonts/`). It also needs `ffmpeg`.
 
 - **Change the words:** edit `lines` in `stories/<story>.json`. Each line is spoken and captioned.
-- **Change the voice:** set `"voice"` to `hm_omega` or `hm_psi` (male) or `hf_alpha` or `hf_beta` (female). `"speed"` sets how fast it speaks.
+  - A plain line, such as `"सामने था, सौ योजन का विशाल समुद्र।"`, is read by the narrator.
+  - For a character to say a line, write `{"by": "hanuman", "text": "जय श्री राम!"}`. You can also give the character's number in the scene's `chars` list, for example `"by": 2`. That character speaks in their own voice, their mouth moves with the words, and a name tag appears above the caption.
+  - Voices are set in `VOICES` in `make_short.py`. Each character has its own pitch and speed: Ram is calm, Hanuman is deep, Jambavan is old and deep, the vanars are lively, Shabari is an old woman, the squirrel is small. A story can override these with `"voices"`, and a character can use another voice, for example `"voice": "vanar2"`.
+- **Change the narrator's voice:** set `"voice"` to `hm_omega` or `hm_psi` (male) or `hf_alpha` or `hf_beta` (female). `"speed"` sets how fast it speaks.
 - **Characters and what they do:** each scene has a `chars` list. Example:
   `{"who": "ram", "act": ["walk", "bless"], "x": -0.05, "to": 0.37, "move": 0.6, "y": 0.97, "h": 0.38}`
   - `who`: `ram`, `lakshman`, `hanuman`, `vanar`, `jambavan`, `shabari`, `sage` or `squirrel`.

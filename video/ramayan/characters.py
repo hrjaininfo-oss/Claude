@@ -194,10 +194,11 @@ def pose_for(who, act, ph, prog):
     return J, ex, kneel
 
 
-def character(who, act="idle", phase=0.0, prog=0.0, sil=(14, 8, 6), light=(255, 210, 140), stripes=False):
+def character(who, act="idle", phase=0.0, prog=0.0, sil=(14, 8, 6), light=(255, 210, 140), stripes=False, mouth=0.0):
+    """mouth: 0 (closed) .. 1 (wide open), for speaking."""
     B = dict(BODIES[who]); col = sil + (255,)
     if who == "squirrel":
-        return _squirrel_fig(act, phase, col, light, stripes)
+        return _squirrel_fig(act, phase, col, light, stripes, mouth)
     if act == "sit":
         return _seated(B, sil, light, phase)
     img = Image.new("RGBA", (CW, CH), (0, 0, 0, 0)); d = ImageDraw.Draw(img)
@@ -271,15 +272,26 @@ def character(who, act="idle", phase=0.0, prog=0.0, sil=(14, 8, 6), light=(255, 
         d.ellipse([hx - 72, hy - 40, hx + 25, hy + 140], fill=col)
     d.ellipse([hx - R, hy - R, hx + R, hy + R], fill=col)
     if B.get("muzzle"):
-        jaw = 12 * max(0.0, math.sin(TAU * phase * 2)) if act in ("laugh", "talk", "cheer") else 0
-        d.ellipse([hx + 20, hy - 8, hx + 88, hy + 48 + jaw], fill=col)
+        jaw = 30 * mouth + (8 * max(0.0, math.sin(TAU * phase * 2)) if act == "laugh" else 0)
+        d.ellipse([hx + 20, hy - 8, hx + 88, hy + 30], fill=col)                  # upper muzzle
+        d.ellipse([hx + 14, hy + 8 + jaw * 0.6, hx + 78, hy + 50 + jaw], fill=col)  # lower jaw drops when speaking
         d.ellipse([hx - 30, hy - 20, hx + 2, hy + 18], fill=col)
+        if mouth > 0.05:
+            orn.append(("cut", [(hx + 92, hy + 22), (hx + 40, hy + 26 + jaw * 0.4), (hx + 86, hy + 34 + jaw)], 0))
     if B.get("bear"):
         for ex_, ey in ((hx - 48, hy - 58), (hx + 22, hy - 66)):
             d.ellipse([ex_ - 24, ey - 24, ex_ + 24, ey + 24], fill=col)
-        jaw = 14 * max(0.0, math.sin(TAU * phase * 2)) if act == "talk" else 0
-        d.ellipse([hx + 30, hy - 10, hx + 110, hy + 45 + jaw], fill=col)
+        jaw = 30 * mouth
+        d.ellipse([hx + 30, hy - 10, hx + 110, hy + 30], fill=col)
+        d.ellipse([hx + 26, hy + 6 + jaw * 0.6, hx + 100, hy + 48 + jaw], fill=col)
+        if mouth > 0.05:
+            orn.append(("cut", [(hx + 114, hy + 22), (hx + 55, hy + 26 + jaw * 0.4), (hx + 104, hy + 34 + jaw)], 0))
         d.polygon([(hx - 20, hy + 40), (hx + 70, hy + 40), (hx + 30, hy + 150)], fill=col)
+    if not (B.get("muzzle") or B.get("bear")):
+        d.ellipse([hx + R - 40, hy + 18 + 26 * mouth, hx + R + 4, hy + 52 + 26 * mouth], fill=col)   # chin
+        d.ellipse([hx + R - 14, hy - 12, hx + R + 14, hy + 14], fill=col)                             # nose
+        if mouth > 0.05:
+            orn.append(("cut", [(hx + R + 14, hy + 22), (hx + R - 16 - 14 * mouth, hy + 30 + 6 * mouth), (hx + R + 10, hy + 34 + 24 * mouth)], 0))
     if B.get("sage"):
         d.ellipse([hx - 30, hy - 120, hx + 35, hy - 50], fill=col)
         d.polygon([(hx - 10, hy + 30), (hx + 62, hy + 25), (hx + 45, hy + 210), (hx + 5, hy + 180)], fill=col)
@@ -340,7 +352,7 @@ def _tiny_squirrel(d, x, y, s, col, stripes):
             d.line([(x - 30 * s, y - 60 * s + k * 15 * s), (x + 15 * s, y - 85 * s + k * 15 * s)], fill=(255, 236, 180, 255), width=max(3, int(7 * s)))
 
 
-def _squirrel_fig(act, phase, col, light, stripes):
+def _squirrel_fig(act, phase, col, light, stripes, mouth=0.0):
     """Squirrel about 1000 units tall (with tail): idle tail sway, hop, shake."""
     img = Image.new("RGBA", (CW, CH), (0, 0, 0, 0)); d = ImageDraw.Draw(img)
     s = 3.6; x, y = OX, OY; wv = math.sin(TAU * phase)
@@ -360,7 +372,8 @@ def _squirrel_fig(act, phase, col, light, stripes):
     if stripes:
         for k in (-1, 0, 1):
             d.line([(x - 30 * s, y - 70 * s + k * 16 * s), (x + 18 * s, y - 95 * s + k * 16 * s)], fill=(255, 236, 180, 255), width=int(7 * s))
-    out = _finish(img, [], {"aura": stripes}, light)
+    cuts = [("cut", [(x + 78 * s, y - 126 * s), (x + 58 * s, y - 122 * s), (x + 76 * s, y - (118 - 10 * mouth) * s)], 0)] if mouth > 0.05 else []
+    out = _finish(img, cuts, {"aura": stripes}, light)
     if act == "shake":
         out = out.rotate(14 * wv, Image.BILINEAR, center=(OX, OY - 300))
     return out
@@ -394,6 +407,11 @@ _TXT = None
 
 def _finish(img, orn, B, light):
     global _TXT
+    cuts = [o for o in orn if o[0] == "cut"]
+    if cuts:
+        m = Image.new("L", img.size, 255); md = ImageDraw.Draw(m)
+        for _, pts, _w in cuts: md.polygon(pts, fill=0)
+        img.putalpha(Image.fromarray(np.minimum(np.asarray(img.getchannel("A")), np.asarray(m))))
     a = img.getchannel("A")
     small = a.resize((CW // 4, CH // 4))
     sh = Image.new("L", a.size, 0); sh.paste(a, (-9, 7))
