@@ -18,6 +18,9 @@ The TTS model (~350 MB) is downloaded once into video/ramayan/.models/.
 """
 import hashlib, json, math, os, random, subprocess, sys, urllib.request
 import numpy as np
+from PIL import ImageOps
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from characters import character
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -284,12 +287,13 @@ def build_static(bg, idx, rng, story_dir):
         ph = Image.open(custom).convert("RGB")
         sc = max(BW / ph.width, BH / ph.height)
         ph = ph.resize((int(ph.width * sc) + 1, int(ph.height * sc) + 1), Image.LANCZOS)
-        return ph.crop(((ph.width - BW) // 2, (ph.height - BH) // 2, (ph.width - BW) // 2 + BW, (ph.height - BH) // 2 + BH)), True
+        return ph.crop(((ph.width - BW) // 2, (ph.height - BH) // 2, (ph.width - BW) // 2 + BW, (ph.height - BH) // 2 + BH)), None, True
 
     top, hor, sea, sil, sunc = THEMES[bg.get("theme", "dusk")]
     el = set(bg.get("el", []))
     hy = int(BH * (0.60 if "sea" in el else 0.70))
     im = vgrad(BW, BH, top, hor); d = ImageDraw.Draw(im, "RGBA")
+    fg = Image.new("RGBA", (BW, BH), (0, 0, 0, 0)); dfg = ImageDraw.Draw(fg)   # drawn over the waves
     if "stars" in el:
         for _ in range(260):
             x, y, r = rng.uniform(0, BW), rng.uniform(0, hy * 0.85), rng.choice([1.5, 2, 2.5, 3.5])
@@ -311,7 +315,9 @@ def build_static(bg, idx, rng, story_dir):
                             fill=sunc + (int(150 - k * 5),))
     if "cliff" in el:
         pts = [(0, hy - 260), (BW * 0.22, hy - 300), (BW * 0.34, hy - 240), (BW * 0.40, hy + 60), (BW * 0.46, BH), (0, BH)]
-        d.polygon(pts, fill=sil + (255,))
+        dfg.polygon(pts, fill=sil + (255,))
+    if "shore" in el:
+        dfg.polygon(ridge(rng, BW, BH * 0.87, 40, 7) + [(BW, BH), (0, BH)], fill=sil + (255,))
     if "bridge" in el:
         for k in range(40, -1, -1):
             dd = (k / 40) ** 1.8; y = hy + 8 + (BH - hy) * dd * 0.95
@@ -319,13 +325,13 @@ def build_static(bg, idx, rng, story_dir):
             for j in range(n):
                 x = BW / 2 - half + j * sw + rng.uniform(-sw * 0.1, sw * 0.1)
                 c = lerp(sil, sea, rng.uniform(0.1, 0.5))
-                d.ellipse([x, y - sw * 0.28, x + sw * 1.05, y + sw * 0.28], fill=c + (255,))
+                dfg.ellipse([x, y - sw * 0.28, x + sw * 1.05, y + sw * 0.28], fill=c + (255,))
                 if k > 26 and j in (1, 3) and rng.random() < 0.6:
                     f = ImageFont.truetype(FONT_BOLD, int(sw * 0.32))
-                    d.text((x + sw * 0.52, y), "राम", font=f, fill=(255, 170, 60, 230), anchor="mm")
+                    dfg.text((x + sw * 0.52, y), "राम", font=f, fill=(255, 170, 60, 230), anchor="mm")
     if "trees" in el:
         for layer, (base, colt) in enumerate([(hy - 40, lerp(sil, hor, 0.5)), (hy + 120, lerp(sil, hor, 0.25)), (BH * 0.98, sil)]):
-            x = rng.uniform(-80, 0)
+            x = rng.uniform(-80, 0) if layer < 2 else BW + 999   # front layer: ground only, so characters stand out
             while x < BW + 80:
                 h = rng.uniform(260, 520) * (0.7 + 0.3 * layer); wdt = h * rng.uniform(0.35, 0.5)
                 if rng.random() < 0.55:
@@ -360,8 +366,8 @@ def build_static(bg, idx, rng, story_dir):
         sx, sy, s = (BW * 0.5, BH * 0.93, 2.0) if "bridge" not in el else (BW * 0.30, BH * 0.86, 1.6)
         if stripes:
             glow(im, sx, sy - 140 * s, 300 * s / 1.6, (255, 220, 140), 0.9); d = ImageDraw.Draw(im, "RGBA")
-        squirrel(d, sx, sy, s, sil + (255,), stripes)
-    return im, False
+        squirrel(dfg, sx, sy, s, sil + (255,), stripes)
+    return im, (fg if fg.getbbox() else None), False
 
 
 class Particles:
@@ -507,6 +513,18 @@ def main():
     yy, xx = np.mgrid[-1:1:H * 1j, -1:1:W * 1j]
     vign = Image.fromarray((175 * np.clip((np.sqrt(xx * xx + yy * yy) - 0.75) / 0.7, 0, 1) ** 1.3).astype(np.uint8))
     black = Image.new("RGB", (W, H), (0, 0, 0)); white = Image.new("RGB", (W, H), (255, 255, 255))
+    chars = []                              # per scene: list of (spec, pre-rendered image)
+    for i, sc in enumerate(scenes):
+        lst = []
+        if not statics[i][2]:
+            _, _, _, sil_c, sun_c = THEMES[sc["bg"].get("theme", "dusk")]
+            for c in sc.get("chars", []):
+                im = character(c["who"], c.get("arms", "down"), c.get("pose", "stand"), sil=sil_c, light=lerp(sun_c, (255, 255, 255), 0.2), hold=c.get("hold"))
+                if c.get("flip"): im = ImageOps.mirror(im)
+                tgt = c.get("h", 0.3) * BH * 1.25 * (1.0 if c.get("anim") != "grow" else 1.0)
+                if im.height > tgt: im = im.resize((int(im.width * tgt / im.height), int(tgt)), Image.LANCZOS)
+                lst.append((c, im))
+        chars.append(lst)
     parts = {k: Particles(k, prng, n) for k, n in (("embers", 70), ("fireflies", 40), ("dust", 60), ("rain", 160), ("leaves", 28))}
 
     # 4. frames -> ffmpeg
@@ -523,7 +541,7 @@ def main():
         t = fi / FPS
         while si < len(timeline) - 1 and t >= timeline[si]["end"]: si += 1
         tl, sc = timeline[si], scenes[si]; lt = t - tl["start"]; dur = tl["end"] - tl["start"]
-        el = set(sc["bg"].get("el", [])); fx = sc.get("fx", []); static, custom = statics[si]
+        el = set(sc["bg"].get("el", [])); fx = sc.get("fx", []); static, fgl, custom = statics[si]
         # Ken Burns + punch zoom + shake
         z = 1 + 0.07 * (lt / dur) + 0.10 * (1 - ease(lt / 0.35))
         if "build" in fx: z += 0.06 * (lt / dur) ** 2
@@ -560,10 +578,30 @@ def main():
                     col = lerp(sea, (0, 0, 0), 0.15 + k * 0.12)
                     d.polygon(pts + [(W, H), (0, H)], fill=col + (110,))
                     d.line(pts, fill=lerp(sea, sunc, 0.5) + (90,), width=3)
+            if fgl is not None:
+                fgf = fgl.resize((W, H), Image.BILINEAR, box=(cx - cw / 2, cy - ch / 2, cx + cw / 2, cy + ch / 2))
+                frame.paste(fgf, (0, 0), fgf)
+            k_ = W / cw; x0, y0 = cx - cw / 2, cy - ch / 2
+            for c, cim in chars[si]:
+                an = c.get("anim", "bob"); sc_ = 1.0; dx = 0.0; dy = 0.0
+                if an == "grow": sc_ = 0.42 + 0.58 * ease(lt / (dur * 0.7))
+                elif an == "walk": dx = c.get("walk", 0.04) * BW * (lt / dur)
+                elif an == "bob": sc_ = 1 + 0.012 * math.sin(t * 2.2 + c.get("x", 0) * 9)
+                if an == "fly":
+                    q = min(1.0, lt / (dur * 0.9)); fx_ = (-0.1 + 1.2 * q) * W; fy_ = (0.85 - 0.75 * math.sin(math.pi * q * 0.9)) * H
+                    dq = 0.01; tx = 1.2 * W * dq; ty = -(0.75 * math.sin(math.pi * (q + dq) * 0.9) - 0.75 * math.sin(math.pi * q * 0.9)) * H
+                    ang = math.degrees(math.atan2(-ty, tx))
+                    th = c.get("h", 0.3) * H; im2 = cim.resize((max(1, int(cim.width * th / cim.height)), int(th)), Image.BILINEAR).rotate(ang - 90, Image.BILINEAR, expand=True)
+                    frame.paste(im2, (int(fx_ - im2.width / 2), int(fy_ - im2.height / 2)), im2)
+                    continue
+                th = c.get("h", 0.3) * BH * k_ * sc_
+                im2 = cim.resize((max(1, int(cim.width * th / cim.height)), max(1, int(th))), Image.BILINEAR)
+                fxp = (c.get("x", 0.5) * BW + dx - x0) * k_; fyp = (c.get("y", 0.95) * BH + dy - y0) * k_
+                frame.paste(im2, (int(fxp - im2.width / 2), int(fyp - im2.height)), im2)
             if "leap" in el:
-                p_ = ease(min(1, lt / 2.2)); mask = Image.new("L", (W // 4, H // 4), 0); md = ImageDraw.Draw(mask)
+                p_ = min(1.0, lt / (dur * 0.9)); mask = Image.new("L", (W // 4, H // 4), 0); md = ImageDraw.Draw(mask)
                 for k in range(60):
-                    q = p_ - k * 0.012
+                    q = p_ - 0.04 - k * 0.012
                     if q < 0: break
                     x = (-0.1 + 1.2 * q) * W / 4; y = (0.85 - 0.75 * math.sin(math.pi * q * 0.9)) * H / 4
                     r = max(1, 22 - k * 0.35)

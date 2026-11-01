@@ -7,19 +7,215 @@
   "music": "calm",
   "outro": "ऐसी और कहानियों के लिए फ़ॉलो करें",
   "scenes": [
-    {"bg": {"theme": "forest", "el": ["sun", "trees", "path", "fireflies"]},
-     "lines": ["एक बूढ़ी माँ, जिसने बरसों तक, हर सुबह एक ही रास्ता साफ़ किया।"]},
-    {"bg": {"theme": "rain", "el": ["trees", "path", "rain"]},
-     "lines": ["गुरु मतंग ने कहा था, एक दिन श्री राम स्वयं तुम्हारे द्वार आएँगे।"]},
-    {"bg": {"theme": "autumn", "el": ["sun", "trees", "path", "hut", "leaves"]},
-     "lines": ["और शबरी ने इंतज़ार किया। बरसात आई, पतझड़ आया, बाल सफ़ेद हो गए।"]},
-    {"bg": {"theme": "forest", "el": ["trees", "berries", "fireflies"]},
-     "lines": ["रोज़ बेर तोड़ती, और हर बेर चखती, कि कहीं कोई खट्टा न हो।", "राम को सिर्फ़ मीठे बेर मिलें।"]},
-    {"bg": {"theme": "gold", "el": ["rays", "trees", "hut", "aura", "dust"]}, "fx": ["flash"],
-     "lines": ["और फिर वो दिन आया। श्री राम और लक्ष्मण, उसकी कुटिया पर खड़े थे।"]},
-    {"bg": {"theme": "forest", "el": ["trees", "berries", "fireflies"]},
-     "lines": ["लक्ष्मण ठिठके, ये जूठे बेर?", "पर राम ने हर बेर प्रेम से खाया। क्योंकि उनमें जूठन नहीं, भक्ति थी।"]},
-    {"bg": {"theme": "gold", "el": ["rays", "mandala", "dust"]},
-     "lines": ["भगवान को सोना चाँदी नहीं, सच्चा भाव चाहिए।", "जय श्री राम!"]}
+    {
+      "bg": {
+        "theme": "forest",
+        "el": [
+          "sun",
+          "trees",
+          "path",
+          "fireflies"
+        ]
+      },
+      "lines": [
+        "एक बूढ़ी माँ, जिसने बरसों तक, हर सुबह एक ही रास्ता साफ़ किया।"
+      ],
+      "chars": [
+        {
+          "who": "shabari",
+          "arms": "broom",
+          "pose": "stand",
+          "x": 0.42,
+          "y": 0.94,
+          "h": 0.3,
+          "flip": false
+        }
+      ]
+    },
+    {
+      "bg": {
+        "theme": "rain",
+        "el": [
+          "trees",
+          "path",
+          "rain"
+        ]
+      },
+      "lines": [
+        "गुरु मतंग ने कहा था, एक दिन श्री राम स्वयं तुम्हारे द्वार आएँगे।"
+      ],
+      "chars": [
+        {
+          "who": "sage",
+          "arms": "staff",
+          "x": 0.3,
+          "y": 0.95,
+          "h": 0.4
+        },
+        {
+          "who": "shabari",
+          "arms": "namaste",
+          "pose": "stand",
+          "x": 0.66,
+          "y": 0.94,
+          "h": 0.29,
+          "flip": true
+        }
+      ]
+    },
+    {
+      "bg": {
+        "theme": "autumn",
+        "el": [
+          "sun",
+          "trees",
+          "path",
+          "hut",
+          "leaves"
+        ]
+      },
+      "lines": [
+        "और शबरी ने इंतज़ार किया। बरसात आई, पतझड़ आया, बाल सफ़ेद हो गए।"
+      ],
+      "chars": [
+        {
+          "who": "shabari",
+          "arms": "staff",
+          "pose": "stand",
+          "x": 0.34,
+          "y": 0.94,
+          "h": 0.29,
+          "flip": true
+        }
+      ]
+    },
+    {
+      "bg": {
+        "theme": "forest",
+        "el": [
+          "trees",
+          "berries",
+          "fireflies"
+        ]
+      },
+      "lines": [
+        "रोज़ बेर तोड़ती, और हर बेर चखती, कि कहीं कोई खट्टा न हो।",
+        "राम को सिर्फ़ मीठे बेर मिलें।"
+      ],
+      "chars": [
+        {
+          "who": "shabari",
+          "arms": "mouth",
+          "pose": "stand",
+          "x": 0.18,
+          "y": 0.99,
+          "h": 0.36,
+          "flip": false
+        }
+      ]
+    },
+    {
+      "bg": {
+        "theme": "gold",
+        "el": [
+          "rays",
+          "trees",
+          "hut",
+          "aura",
+          "dust"
+        ]
+      },
+      "fx": [
+        "flash"
+      ],
+      "lines": [
+        "और फिर वो दिन आया। श्री राम और लक्ष्मण, उसकी कुटिया पर खड़े थे।"
+      ],
+      "chars": [
+        {
+          "who": "lakshman",
+          "x": 0.18,
+          "y": 0.97,
+          "h": 0.4
+        },
+        {
+          "who": "ram",
+          "arms": "bless",
+          "x": 0.37,
+          "y": 0.97,
+          "h": 0.43
+        },
+        {
+          "who": "shabari",
+          "arms": "namaste",
+          "pose": "stand",
+          "x": 0.6,
+          "y": 0.97,
+          "h": 0.3,
+          "flip": true
+        }
+      ]
+    },
+    {
+      "bg": {
+        "theme": "forest",
+        "el": [
+          "trees",
+          "fireflies"
+        ]
+      },
+      "lines": [
+        "लक्ष्मण ठिठके, ये जूठे बेर?",
+        "पर राम ने हर बेर प्रेम से खाया। क्योंकि उनमें जूठन नहीं, भक्ति थी।"
+      ],
+      "chars": [
+        {
+          "who": "lakshman",
+          "arms": "stop",
+          "x": 0.13,
+          "y": 0.98,
+          "h": 0.38
+        },
+        {
+          "who": "ram",
+          "arms": "mouth",
+          "x": 0.32,
+          "y": 0.98,
+          "h": 0.42
+        },
+        {
+          "who": "shabari",
+          "arms": "offer",
+          "pose": "kneel",
+          "x": 0.8,
+          "y": 0.98,
+          "h": 0.27,
+          "flip": true
+        }
+      ]
+    },
+    {
+      "bg": {
+        "theme": "gold",
+        "el": [
+          "rays",
+          "mandala",
+          "dust"
+        ]
+      },
+      "lines": [
+        "भगवान को सोना चाँदी नहीं, सच्चा भाव चाहिए।",
+        "जय श्री राम!"
+      ],
+      "chars": [
+        {
+          "who": "ram",
+          "arms": "bless",
+          "x": 0.5,
+          "y": 1.0,
+          "h": 0.56
+        }
+      ]
+    }
   ]
 }

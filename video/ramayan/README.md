@@ -8,6 +8,8 @@ Three ready-made vertical videos (1080×1920, 9:16) with Hindi voiceover:
 | `gilahri_short.mp4` | गिलहरी और राम सेतु (The squirrel and Ram Setu) | 44 s |
 | `shabari_short.mp4` | शबरी के बेर (Shabari's berries) | 45 s |
 
+**Characters:** Hanuman, Shri Ram, Lakshman, Shabari, Jambavan, Rishi Matang and the vanar sena, drawn in code as backlit silhouettes with gold ornaments (crown, necklace, gada) and a rim light. Ram and Hanuman also have a golden aura. Hanuman grows to giant size, then flies across the ocean.
+
 **Editing style:** a question hook for the first 3 seconds, captions that show 2–3 words at a time with the spoken word in yellow, a zoom punch and whoosh on every cut, a slow zoom and pan on each background, flash, shake and boom on the climax, drums that speed up (in the Hanuman video), and a "follow" call to action at the end.
 
 ## Re-make or change a video
@@ -22,7 +24,14 @@ On the first run it downloads the offline Hindi voice model (about 350 MB, into 
 
 - **Change the words:** edit `lines` in `stories/<story>.json`. Each line is spoken and captioned.
 - **Change the voice:** set `"voice"` to `hm_omega` or `hm_psi` (male) or `hf_alpha` or `hf_beta` (female). `"speed"` sets how fast it speaks.
-- **Use your own pictures:** put `1.jpg`, `2.jpg` and so on (one per scene, in scene order) in `assets/<story>/`, for example `assets/hanuman/1.jpg`. These replace the drawn backgrounds and keep all the zoom and caption effects.
+- **Move or change characters:** each scene has a `chars` list, for example
+  `{"who": "hanuman", "arms": "gada", "x": 0.5, "y": 0.97, "h": 0.4, "flip": true}`.
+  - `who`: `ram`, `lakshman`, `hanuman`, `vanar`, `jambavan`, `shabari` or `sage`.
+  - `arms`: `down`, `bless`, `namaste`, `point`, `extend`, `mouth`, `up`, `carry`, `laugh`, `gada`, `staff`, `broom`, `offer`, `fly` or `stop`.
+  - `pose`: `stand`, `sit` or `kneel`.
+  - `anim`: `bob` (the default), `grow`, `walk` or `fly`.
+  - `x` and `y` set where the feet go and `h` sets the height, all as fractions of the frame. `flip: true` makes the character face left.
+- **Use your own pictures:** put `1.jpg`, `2.jpg` and so on (one per scene, in scene order) in `assets/<story>/`, for example `assets/hanuman/1.jpg`. These replace the drawn backgrounds and characters, and keep all the zoom and caption effects.
 - **Your own voice recording:** not wired in yet.
 
 ## Source notes
