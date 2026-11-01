@@ -14,14 +14,21 @@
           "sun",
           "sea",
           "waves",
-          "squirrel",
           "dust"
         ]
       },
       "lines": [
         "भगवान राम ने, एक छोटी सी गिलहरी को आशीर्वाद क्यों दिया?"
       ],
-      "chars": []
+      "chars": [
+        {
+          "who": "squirrel",
+          "act": "idle",
+          "x": 0.5,
+          "y": 0.93,
+          "h": 0.3
+        }
+      ]
     },
     {
       "bg": {
@@ -41,27 +48,31 @@
       "chars": [
         {
           "who": "vanar",
-          "arms": "carry",
-          "x": 0.22,
+          "act": "carry_walk",
+          "x": 0.02,
           "y": 0.97,
-          "h": 0.2,
-          "flip": false
+          "h": 0.18,
+          "to": 0.4,
+          "move": 1.0
         },
         {
           "who": "vanar",
-          "arms": "carry",
-          "x": 0.76,
+          "act": "carry_walk",
+          "x": 1.0,
           "y": 0.97,
-          "h": 0.19,
+          "h": 0.17,
+          "to": 0.62,
+          "move": 1.0,
           "flip": true
         },
         {
           "who": "vanar",
-          "arms": "carry",
-          "x": 0.42,
+          "act": "carry_walk",
+          "x": 0.36,
           "y": 0.74,
-          "h": 0.07,
-          "flip": false
+          "h": 0.065,
+          "to": 0.46,
+          "move": 1.0
         }
       ]
     },
@@ -73,7 +84,6 @@
           "sea",
           "waves",
           "bridge",
-          "squirrel",
           "dust"
         ]
       },
@@ -83,11 +93,26 @@
       ],
       "chars": [
         {
+          "who": "squirrel",
+          "act": [
+            "hop",
+            "shake"
+          ],
+          "x": 0.12,
+          "y": 0.86,
+          "h": 0.13,
+          "to": 0.3,
+          "move": 0.35,
+          "move_act": "hop"
+        },
+        {
           "who": "vanar",
-          "arms": "carry",
-          "x": 0.74,
+          "act": "carry_walk",
+          "x": 0.95,
           "y": 0.97,
-          "h": 0.19,
+          "h": 0.17,
+          "to": 0.7,
+          "move": 1.0,
           "flip": true
         }
       ]
@@ -99,8 +124,7 @@
           "sea",
           "waves",
           "bridge",
-          "dust",
-          "squirrel"
+          "dust"
         ]
       },
       "lines": [
@@ -108,19 +132,26 @@
       ],
       "chars": [
         {
+          "who": "squirrel",
+          "act": "shake",
+          "x": 0.3,
+          "y": 0.86,
+          "h": 0.13
+        },
+        {
           "who": "vanar",
-          "arms": "laugh",
+          "act": "laugh",
           "x": 0.62,
           "y": 0.97,
-          "h": 0.19,
+          "h": 0.17,
           "flip": true
         },
         {
           "who": "vanar",
-          "arms": "point",
+          "act": "point",
           "x": 0.8,
           "y": 0.97,
-          "h": 0.18,
+          "h": 0.16,
           "flip": true
         }
       ]
@@ -144,11 +175,13 @@
       "chars": [
         {
           "who": "ram",
-          "arms": "extend",
+          "act": [
+            "lift_stroke",
+            "stroke"
+          ],
           "x": 0.45,
           "y": 1.0,
-          "h": 0.58,
-          "hold": "squirrel"
+          "h": 0.5
         }
       ]
     },
@@ -171,16 +204,27 @@
       "chars": [
         {
           "who": "lakshman",
-          "x": 0.36,
+          "act": [
+            "walk",
+            "idle"
+          ],
+          "x": 0.1,
           "y": 0.98,
-          "h": 0.3
+          "h": 0.26,
+          "to": 0.36,
+          "move": 0.5
         },
         {
           "who": "ram",
-          "arms": "bless",
-          "x": 0.6,
+          "act": [
+            "walk",
+            "bless"
+          ],
+          "x": 0.32,
           "y": 0.98,
-          "h": 0.32
+          "h": 0.28,
+          "to": 0.6,
+          "move": 0.5
         }
       ]
     }

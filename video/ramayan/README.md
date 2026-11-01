@@ -8,7 +8,7 @@ Three ready-made vertical videos (1080×1920, 9:16) with Hindi voiceover:
 | `gilahri_short.mp4` | गिलहरी और राम सेतु (The squirrel and Ram Setu) | 44 s |
 | `shabari_short.mp4` | शबरी के बेर (Shabari's berries) | 45 s |
 
-**Characters:** Hanuman, Shri Ram, Lakshman, Shabari, Jambavan, Rishi Matang and the vanar sena, drawn in code as backlit silhouettes with gold ornaments (crown, necklace, gada) and a rim light. Ram and Hanuman also have a golden aura. Hanuman grows to giant size, then flies across the ocean.
+**Characters (they act out the story as it is narrated):** Hanuman, Shri Ram, Lakshman, Shabari, Jambavan, Rishi Matang and the vanar sena, drawn in code as backlit silhouettes with gold ornaments (crown, necklace, gada) and a rim light. Ram and Hanuman also have a golden aura. Hanuman grows to giant size, then flies across the ocean.
 
 **Editing style:** a question hook for the first 3 seconds, captions that show 2–3 words at a time with the spoken word in yellow, a zoom punch and whoosh on every cut, a slow zoom and pan on each background, flash, shake and boom on the climax, drums that speed up (in the Hanuman video), and a "follow" call to action at the end.
 
@@ -24,13 +24,15 @@ On the first run it downloads the offline Hindi voice model (about 350 MB, into 
 
 - **Change the words:** edit `lines` in `stories/<story>.json`. Each line is spoken and captioned.
 - **Change the voice:** set `"voice"` to `hm_omega` or `hm_psi` (male) or `hf_alpha` or `hf_beta` (female). `"speed"` sets how fast it speaks.
-- **Move or change characters:** each scene has a `chars` list, for example
-  `{"who": "hanuman", "arms": "gada", "x": 0.5, "y": 0.97, "h": 0.4, "flip": true}`.
-  - `who`: `ram`, `lakshman`, `hanuman`, `vanar`, `jambavan`, `shabari` or `sage`.
-  - `arms`: `down`, `bless`, `namaste`, `point`, `extend`, `mouth`, `up`, `carry`, `laugh`, `gada`, `staff`, `broom`, `offer`, `fly` or `stop`.
-  - `pose`: `stand`, `sit` or `kneel`.
-  - `anim`: `bob` (the default), `grow`, `walk` or `fly`.
-  - `x` and `y` set where the feet go and `h` sets the height, all as fractions of the frame. `flip: true` makes the character face left.
+- **Characters and what they do:** each scene has a `chars` list. Example:
+  `{"who": "ram", "act": ["walk", "bless"], "x": -0.05, "to": 0.37, "move": 0.6, "y": 0.97, "h": 0.38}`
+  - `who`: `ram`, `lakshman`, `hanuman`, `vanar`, `jambavan`, `shabari`, `sage` or `squirrel`.
+  - `act`: what the character does. Give one action, or a list with one action per narration line, so the movement follows what is being said. Actions:
+    - Looping: `idle`, `walk`, `carry_walk`, `sweep`, `laugh`, `point`, `cheer`, `talk`, `eat`, `offer` (kneeling with a bowl), `namaste`, `namaste_bow`, `wait`, `sad`, `sit`, `fly`, `stroke`, and `hop` or `shake` (squirrel only).
+    - One-off, timed to the line: `bless` (hand rises), `power` (Hanuman raises his gada), `hesitate` (Lakshman raises a hand), `lift_stroke` (Ram lifts the squirrel, then strokes its back).
+  - `x` and `to`: the character walks from `x` to `to` during the first `move` part of the scene (0.6 means 60%), then does its `act`. `move_act` changes the walking action, for example to `sweep` or `hop`.
+  - `y` sets where the feet go and `h` sets the height, as fractions of the frame. `flip: true` makes the character face left.
+  - `anim`: `grow` (gets bigger from line number `grow_line`) or `fly` (flies across the screen).
 - **Use your own pictures:** put `1.jpg`, `2.jpg` and so on (one per scene, in scene order) in `assets/<story>/`, for example `assets/hanuman/1.jpg`. These replace the drawn backgrounds and characters, and keep all the zoom and caption effects.
 - **Your own voice recording:** not wired in yet.
 

@@ -26,10 +26,10 @@
       "chars": [
         {
           "who": "hanuman",
-          "pose": "sit",
+          "act": "sit",
           "x": 0.19,
           "y": 0.47,
-          "h": 0.17
+          "h": 0.15
         }
       ]
     },
@@ -52,41 +52,62 @@
       "chars": [
         {
           "who": "vanar",
-          "arms": "down",
-          "x": 0.14,
-          "y": 0.93,
-          "h": 0.15,
-          "flip": false
-        },
-        {
-          "who": "vanar",
-          "arms": "point",
-          "x": 0.24,
-          "y": 0.93,
-          "h": 0.17,
-          "flip": false
-        },
-        {
-          "who": "vanar",
-          "arms": "down",
-          "x": 0.34,
+          "act": [
+            "walk",
+            "idle",
+            "talk"
+          ],
+          "x": -0.05,
           "y": 0.93,
           "h": 0.14,
-          "flip": false
+          "to": 0.14,
+          "move": 0.35
+        },
+        {
+          "who": "vanar",
+          "act": [
+            "walk",
+            "point",
+            "idle"
+          ],
+          "x": -0.12,
+          "y": 0.93,
+          "h": 0.15,
+          "to": 0.25,
+          "move": 0.4
+        },
+        {
+          "who": "vanar",
+          "act": [
+            "walk",
+            "idle",
+            "sad"
+          ],
+          "x": -0.2,
+          "y": 0.93,
+          "h": 0.13,
+          "to": 0.35,
+          "move": 0.45
         },
         {
           "who": "jambavan",
-          "arms": "staff",
-          "x": 0.47,
+          "act": [
+            "walk",
+            "idle",
+            "talk"
+          ],
+          "x": -0.3,
           "y": 0.93,
-          "h": 0.19
+          "h": 0.17,
+          "to": 0.48,
+          "move": 0.5
         },
         {
           "who": "hanuman",
-          "pose": "sit",
+          "act": "sit",
           "x": 0.8,
           "y": 0.93,
-          "h": 0.11
+          "h": 0.1
         }
       ]
     },
@@ -108,35 +129,43 @@
       "chars": [
         {
           "who": "vanar",
-          "arms": "up",
+          "act": [
+            "cheer",
+            "sad"
+          ],
           "x": 0.5,
-          "y": 0.93,
-          "h": 0.16,
-          "flip": false
+          "y": 0.92,
+          "h": 0.14
         },
         {
           "who": "vanar",
-          "arms": "point",
+          "act": [
+            "point",
+            "sad"
+          ],
           "x": 0.62,
-          "y": 0.93,
-          "h": 0.15,
-          "flip": false
+          "y": 0.92,
+          "h": 0.13
         },
         {
           "who": "vanar",
-          "arms": "up",
+          "act": [
+            "cheer",
+            "sad"
+          ],
           "x": 0.74,
-          "y": 0.93,
-          "h": 0.17,
-          "flip": false
+          "y": 0.92,
+          "h": 0.15
         },
         {
           "who": "vanar",
-          "arms": "laugh",
+          "act": [
+            "talk",
+            "sad"
+          ],
           "x": 0.86,
-          "y": 0.93,
-          "h": 0.15,
-          "flip": false
+          "y": 0.92,
+          "h": 0.13
         }
       ]
     },
@@ -156,17 +185,25 @@
       "chars": [
         {
           "who": "jambavan",
-          "arms": "point",
-          "x": 0.33,
+          "act": [
+            "walk",
+            "talk"
+          ],
+          "x": 0.08,
           "y": 0.97,
-          "h": 0.4
+          "h": 0.36,
+          "to": 0.32,
+          "move": 0.4
         },
         {
           "who": "hanuman",
-          "arms": "gada",
+          "act": [
+            "idle",
+            "idle"
+          ],
           "x": 0.7,
           "y": 0.97,
-          "h": 0.44,
+          "h": 0.38,
           "flip": true
         }
       ]
@@ -191,11 +228,15 @@
       "chars": [
         {
           "who": "hanuman",
-          "arms": "gada",
+          "act": [
+            "power",
+            "power"
+          ],
           "x": 0.5,
           "y": 0.99,
-          "h": 0.62,
-          "anim": "grow"
+          "h": 0.55,
+          "anim": "grow",
+          "grow_line": 1
         }
       ]
     },
@@ -220,8 +261,10 @@
       "chars": [
         {
           "who": "hanuman",
-          "arms": "fly",
-          "h": 0.26,
+          "act": "fly",
+          "x": 0.5,
+          "y": 0.5,
+          "h": 0.22,
           "anim": "fly"
         }
       ]
@@ -245,10 +288,13 @@
       "chars": [
         {
           "who": "hanuman",
-          "arms": "gada",
+          "act": [
+            "idle",
+            "power"
+          ],
           "x": 0.3,
           "y": 0.93,
-          "h": 0.34
+          "h": 0.3
         }
       ]
     }

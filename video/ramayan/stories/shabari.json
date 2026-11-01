@@ -23,12 +23,13 @@
       "chars": [
         {
           "who": "shabari",
-          "arms": "broom",
-          "pose": "stand",
-          "x": 0.42,
+          "act": "sweep",
+          "x": 0.3,
           "y": 0.94,
           "h": 0.3,
-          "flip": false
+          "to": 0.5,
+          "move": 1.0,
+          "move_act": "sweep"
         }
       ]
     },
@@ -47,18 +48,17 @@
       "chars": [
         {
           "who": "sage",
-          "arms": "staff",
+          "act": "bless",
           "x": 0.3,
           "y": 0.95,
-          "h": 0.4
+          "h": 0.36
         },
         {
           "who": "shabari",
-          "arms": "namaste",
-          "pose": "stand",
+          "act": "namaste_bow",
           "x": 0.66,
           "y": 0.94,
-          "h": 0.29,
+          "h": 0.28,
           "flip": true
         }
       ]
@@ -80,11 +80,10 @@
       "chars": [
         {
           "who": "shabari",
-          "arms": "staff",
-          "pose": "stand",
+          "act": "wait",
           "x": 0.34,
           "y": 0.94,
-          "h": 0.29,
+          "h": 0.28,
           "flip": true
         }
       ]
@@ -105,12 +104,13 @@
       "chars": [
         {
           "who": "shabari",
-          "arms": "mouth",
-          "pose": "stand",
+          "act": [
+            "eat",
+            "eat"
+          ],
           "x": 0.18,
           "y": 0.99,
-          "h": 0.36,
-          "flip": false
+          "h": 0.34
         }
       ]
     },
@@ -134,24 +134,28 @@
       "chars": [
         {
           "who": "lakshman",
-          "x": 0.18,
+          "act": "idle",
+          "x": -0.1,
           "y": 0.97,
-          "h": 0.4
+          "h": 0.36,
+          "to": 0.18,
+          "move": 0.6
         },
         {
           "who": "ram",
-          "arms": "bless",
-          "x": 0.37,
+          "act": "bless",
+          "x": -0.05,
           "y": 0.97,
-          "h": 0.43
+          "h": 0.38,
+          "to": 0.37,
+          "move": 0.6
         },
         {
           "who": "shabari",
-          "arms": "namaste",
-          "pose": "stand",
+          "act": "namaste_bow",
           "x": 0.6,
           "y": 0.97,
-          "h": 0.3,
+          "h": 0.28,
           "flip": true
         }
       ]
@@ -171,25 +175,30 @@
       "chars": [
         {
           "who": "lakshman",
-          "arms": "stop",
+          "act": [
+            "hesitate",
+            "idle"
+          ],
           "x": 0.13,
           "y": 0.98,
-          "h": 0.38
+          "h": 0.34
         },
         {
           "who": "ram",
-          "arms": "mouth",
+          "act": [
+            "idle",
+            "eat"
+          ],
           "x": 0.32,
           "y": 0.98,
-          "h": 0.42
+          "h": 0.37
         },
         {
           "who": "shabari",
-          "arms": "offer",
-          "pose": "kneel",
+          "act": "offer",
           "x": 0.8,
           "y": 0.98,
-          "h": 0.27,
+          "h": 0.26,
           "flip": true
         }
       ]
@@ -210,10 +219,13 @@
       "chars": [
         {
           "who": "ram",
-          "arms": "bless",
+          "act": [
+            "idle",
+            "bless"
+          ],
           "x": 0.5,
           "y": 1.0,
-          "h": 0.56
+          "h": 0.5
         }
       ]
     }

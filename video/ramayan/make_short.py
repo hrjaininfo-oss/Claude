@@ -20,7 +20,7 @@ import hashlib, json, math, os, random, subprocess, sys, urllib.request
 import numpy as np
 from PIL import ImageOps
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from characters import character
+from characters import character, CYCLE, ONE_SHOT, OX as COX, OY as COY
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -470,9 +470,10 @@ def main():
     voice_parts, timeline, cur = [], [], 0.45
     scenes = story["scenes"]
     for si, sc in enumerate(scenes):
-        s0 = cur; caps = []
+        s0 = cur; caps = []; lts = []
         for line in sc["lines"]:
             a = tts(line, voice, speed); voice_parts.append((cur, a)); dur = len(a) / SR
+            lts.append((cur, cur + dur))
             words = line.split(); wts = [word_weight(w) for w in words]; tot = sum(wts)
             wt, acc = [], 0
             for w, x in zip(words, wts):
@@ -482,7 +483,7 @@ def main():
                 caps.append((ch, wt[k:k + len(ch)])); k += len(ch)
             cur += dur + 0.22
         cur += 0.35
-        timeline.append(dict(start=s0, end=cur, caps=caps))
+        timeline.append(dict(start=s0, end=cur, caps=caps, lines=lts))
     T = cur + 1.6
     timeline[-1]["end"] = T
     print(f"Duration {T:.1f}s")
@@ -513,18 +514,25 @@ def main():
     yy, xx = np.mgrid[-1:1:H * 1j, -1:1:W * 1j]
     vign = Image.fromarray((175 * np.clip((np.sqrt(xx * xx + yy * yy) - 0.75) / 0.7, 0, 1) ** 1.3).astype(np.uint8))
     black = Image.new("RGB", (W, H), (0, 0, 0)); white = Image.new("RGB", (W, H), (255, 255, 255))
-    chars = []                              # per scene: list of (spec, pre-rendered image)
-    for i, sc in enumerate(scenes):
-        lst = []
-        if not statics[i][2]:
-            _, _, _, sil_c, sun_c = THEMES[sc["bg"].get("theme", "dusk")]
-            for c in sc.get("chars", []):
-                im = character(c["who"], c.get("arms", "down"), c.get("pose", "stand"), sil=sil_c, light=lerp(sun_c, (255, 255, 255), 0.2), hold=c.get("hold"))
-                if c.get("flip"): im = ImageOps.mirror(im)
-                tgt = c.get("h", 0.3) * BH * 1.25 * (1.0 if c.get("anim") != "grow" else 1.0)
-                if im.height > tgt: im = im.resize((int(im.width * tgt / im.height), int(tgt)), Image.LANCZOS)
-                lst.append((c, im))
-        chars.append(lst)
+    char_cache = {}; cache_scene = [-1]
+
+    def char_frame(si, ci, c, act, phase, prog):
+        """Pre-scaled, cropped character image + feet anchor, cached per scene."""
+        if cache_scene[0] != si: char_cache.clear(); cache_scene[0] = si
+        oneshot = act in ONE_SHOT
+        qp = min(int(prog * 40), 16) if oneshot else 0
+        qi = 0 if (oneshot and qp < 16) else int(phase * 12) % 12
+        key = (ci, act, qi, qp)
+        if key not in char_cache:
+            _, _, _, sil_c, sun_c = THEMES[scenes[si]["bg"].get("theme", "dusk")]
+            im = character(c["who"], act, qi / 12, qp / 40, sil=sil_c, light=lerp(sun_c, (255, 255, 255), 0.2), stripes=c.get("stripes", False))
+            if c.get("flip"): im = ImageOps.mirror(im)
+            f = c.get("h", 0.3) * (H if c.get("anim") == "fly" else BH) / 1000
+            im = im.resize((max(1, int(im.width * f)), max(1, int(im.height * f))), Image.LANCZOS)
+            bb = im.getbbox() or (0, 0, 1, 1)
+            char_cache[key] = (im.crop(bb), COX * f - bb[0], COY * f - bb[1])
+        return char_cache[key]
+
     parts = {k: Particles(k, prng, n) for k, n in (("embers", 70), ("fireflies", 40), ("dust", 60), ("rain", 160), ("leaves", 28))}
 
     # 4. frames -> ffmpeg
@@ -582,22 +590,33 @@ def main():
                 fgf = fgl.resize((W, H), Image.BILINEAR, box=(cx - cw / 2, cy - ch / 2, cx + cw / 2, cy + ch / 2))
                 frame.paste(fgf, (0, 0), fgf)
             k_ = W / cw; x0, y0 = cx - cw / 2, cy - ch / 2
-            for c, cim in chars[si]:
-                an = c.get("anim", "bob"); sc_ = 1.0; dx = 0.0; dy = 0.0
-                if an == "grow": sc_ = 0.42 + 0.58 * ease(lt / (dur * 0.7))
-                elif an == "walk": dx = c.get("walk", 0.04) * BW * (lt / dur)
-                elif an == "bob": sc_ = 1 + 0.012 * math.sin(t * 2.2 + c.get("x", 0) * 9)
+            li = 0
+            for j, (l0, _) in enumerate(tl["lines"]):
+                if t >= l0: li = j
+            l0, l1 = tl["lines"][li]; lprog = min(1.0, max(0.0, (t - l0) / max(l1 - l0, 0.1)))
+            for ci, c in enumerate(sc.get("chars", [])):
+                acts = c.get("act", "idle"); act = acts[min(li, len(acts) - 1)] if isinstance(acts, list) else acts
+                x = c.get("x", 0.5); sc_ = 1.0
+                if "to" in c:
+                    mp = min(1.0, lt / (dur * c.get("move", 0.6)))
+                    x = x + (c["to"] - x) * mp
+                    if mp < 1: act = c.get("move_act", "walk")
+                an = c.get("anim")
+                if an == "grow":
+                    g0 = tl["lines"][min(c.get("grow_line", 0), len(tl["lines"]) - 1)][0]
+                    sc_ = 0.42 + 0.58 * ease((t - g0) / max(tl["end"] - g0, 0.1) / 0.7) if t >= g0 else 0.42
+                cim, ax, ay = char_frame(si, ci, c, act, (t / CYCLE.get(act, 2.0)) % 1.0, lprog)
                 if an == "fly":
                     q = min(1.0, lt / (dur * 0.9)); fx_ = (-0.1 + 1.2 * q) * W; fy_ = (0.85 - 0.75 * math.sin(math.pi * q * 0.9)) * H
-                    dq = 0.01; tx = 1.2 * W * dq; ty = -(0.75 * math.sin(math.pi * (q + dq) * 0.9) - 0.75 * math.sin(math.pi * q * 0.9)) * H
-                    ang = math.degrees(math.atan2(-ty, tx))
-                    th = c.get("h", 0.3) * H; im2 = cim.resize((max(1, int(cim.width * th / cim.height)), int(th)), Image.BILINEAR).rotate(ang - 90, Image.BILINEAR, expand=True)
+                    ty = -(0.75 * math.sin(math.pi * (q + 0.01) * 0.9) - 0.75 * math.sin(math.pi * q * 0.9)) * H
+                    ang = math.degrees(math.atan2(-ty, 1.2 * W * 0.01))
+                    im2 = cim.rotate(ang - 90, Image.BILINEAR, expand=True)
                     frame.paste(im2, (int(fx_ - im2.width / 2), int(fy_ - im2.height / 2)), im2)
                     continue
-                th = c.get("h", 0.3) * BH * k_ * sc_
-                im2 = cim.resize((max(1, int(cim.width * th / cim.height)), max(1, int(th))), Image.BILINEAR)
-                fxp = (c.get("x", 0.5) * BW + dx - x0) * k_; fyp = (c.get("y", 0.95) * BH + dy - y0) * k_
-                frame.paste(im2, (int(fxp - im2.width / 2), int(fyp - im2.height)), im2)
+                kk = k_ * sc_
+                im2 = cim.resize((max(1, int(cim.width * kk)), max(1, int(cim.height * kk))), Image.BILINEAR)
+                fxp = (x * BW - x0) * k_; fyp = (c.get("y", 0.95) * BH - y0) * k_
+                frame.paste(im2, (int(fxp - ax * kk), int(fyp - ay * kk)), im2)
             if "leap" in el:
                 p_ = min(1.0, lt / (dur * 0.9)); mask = Image.new("L", (W // 4, H // 4), 0); md = ImageDraw.Draw(mask)
                 for k in range(60):
