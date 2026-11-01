@@ -125,6 +125,8 @@ VOICES = {
     "shabari":  ("hf_beta", 0.86, -2.0),
     "squirrel": ("hf_alpha", 1.05, 5.0),
 }
+HEAD = {"shabari": (0.24, 0.70), "jambavan": (0.12, 0.80), "sage": (0.06, 0.84), "squirrel": (0.08, 0.55),
+        "vanar": (0.02, 0.86), "hanuman": (0.02, 0.86)}   # head position: forward, up (fractions of height)
 NAMES = {"hanuman": "हनुमान", "ram": "श्री राम", "lakshman": "लक्ष्मण", "jambavan": "जाम्बवान", "vanar": "वानर",
          "sage": "ऋषि मतंग", "shabari": "शबरी", "squirrel": "गिलहरी"}
 NAME_COL = {"hanuman": (210, 70, 20), "ram": (40, 90, 200), "lakshman": (190, 140, 20), "jambavan": (110, 70, 40),
@@ -139,6 +141,25 @@ def speak(text, prof):
     if st:
         n = int(len(a) / r); a = np.interp(np.arange(n) * r, np.arange(len(a)), a).astype(np.float32)
     return a
+
+
+def space(a, wet, echo=False):
+    """Small-room reverb (plus an echo for chants) so voices sit in the scene."""
+    n = int(0.9 * SR); t_ = np.arange(n) / SR
+    ir = np.random.default_rng(3).standard_normal(n) * np.exp(-t_ / 0.28); ir /= np.sqrt((ir ** 2).sum())
+    L = len(a) + n; m = 1 << (L - 1).bit_length()
+    rv = np.fft.irfft(np.fft.rfft(a, m) * np.fft.rfft(ir, m), m)[:L].astype(np.float32)
+    out = np.pad(a, (0, n)) + wet * rv
+    if echo:
+        dly = int(0.30 * SR); out[dly:] += 0.32 * out[:-dly]
+    return out.astype(np.float32)
+
+
+def riser(dur, rng):
+    n = int(dur * SR); t_ = np.arange(n) / SR; p_ = t_ / dur
+    sw = np.sin(2 * np.pi * np.cumsum(200 + 900 * p_ ** 2) / SR) * 0.25
+    nz = lowpass(rng.standard_normal(n).astype(np.float32), 0.02 + 0.4 * p_ ** 2) * 1.5
+    return ((sw + nz) * p_ ** 2).astype(np.float32)
 
 
 def envelope(a):
@@ -438,7 +459,10 @@ FCAP = ImageFont.truetype(FONT_CAP, 104)
 FHOOK = ImageFont.truetype(FONT_TITLE, 92)
 FTAG = ImageFont.truetype(FONT_BOLD, 40)
 FOUT = ImageFont.truetype(FONT_BOLD, 50)
+FEND = ImageFont.truetype(FONT_TITLE, 150)
 _cap_cache = {}
+KEYWORDS = {"राम", "श्री", "हनुमान", "सीता", "लंका", "जाम्बवान", "शबरी", "लक्ष्मण", "बजरंगबली", "पवनपुत्र", "गिलहरी",
+            "भक्ति", "प्रेम", "सेवा", "प्रभु", "भगवान", "शक्ति", "समुद्र", "सेतु", "बेर", "मतंग"}
 
 
 def caption_img(words, active):
@@ -455,7 +479,7 @@ def caption_img(words, active):
     for li, ln in enumerate(lines):
         tot = sum(ws[i] for i in ln) + sp * (len(ln) - 1); x = (W - tot) / 2; y = 30 + li * lh + lh * 0.62
         for i in ln:
-            col = (255, 214, 0) if i == active else (255, 255, 255)
+            col = (255, 214, 0) if i == active else ((255, 160, 60) if words[i].strip(",।!?") in KEYWORDS else (255, 255, 255))
             d.text((x + 6, y + 8), words[i], font=FCAP, fill=(0, 0, 0, 150), anchor="ls", stroke_width=12, stroke_fill=(0, 0, 0, 150))
             d.text((x, y), words[i], font=FCAP, fill=col, anchor="ls", stroke_width=12, stroke_fill=(0, 0, 0))
             x += ws[i] + sp
@@ -517,7 +541,9 @@ def main():
             vkey = (chars_[ci].get("voice", who) if ci is not None else "narrator")
             prof = tuple(story.get("voices", {}).get(vkey, VOICES.get(vkey, VOICES["narrator"])))
             if vkey == "narrator" and "voices" not in story: prof = (voice, speed, 0.0)
-            a = speak(text, prof); voice_parts.append((cur, a)); dur = len(a) / SR
+            a = speak(text, prof); dur = len(a) / SR
+            wet = 0.10 + (0.12 if who in ("ram", "sage") else 0) + (0.15 if "जय" in text else 0)
+            voice_parts.append((cur, space(a, wet, echo="जय" in text)))
             lts.append((cur, cur + dur, ci, envelope(a)))
             label = who
             words = text.split(); wts = [word_weight(w) for w in words]; tot = sum(wts)
@@ -527,10 +553,10 @@ def main():
             k = 0
             for ch in chunk_words(words):
                 caps.append((ch, wt[k:k + len(ch)], label)); k += len(ch)
-            cur += dur + 0.22
-        cur += 0.35
+            cur += dur + 0.14
+        cur += 0.25
         timeline.append(dict(start=s0, end=cur, caps=caps, lines=lts))
-    T = cur + 1.6
+    T = cur + 2.2
     timeline[-1]["end"] = T
     print(f"Duration {T:.1f}s")
 
@@ -547,7 +573,12 @@ def main():
     sfx = np.zeros_like(vo)
     for i, tl in enumerate(timeline[1:], 1):
         add(sfx, whoosh(rng=rng) * 0.35, max(tl["start"] - 0.3, 0))
-        if "boom" in fx_list[i]: add(sfx, boom(rng) * 0.55, tl["start"])
+        if "boom" in fx_list[i]:
+            add(sfx, boom(rng) * 0.55, tl["start"]); add(sfx, riser(2.4, rng) * 0.35, max(tl["start"] - 2.4, 0))
+    add(sfx, boom(rng) * 0.22, 0.05)                    # impact under the hook
+    for tl in timeline:                                 # soft swish on every cut to a speaker close-up
+        for (l0, _, spk, _) in tl["lines"][1:]:
+            if spk is not None: add(sfx, whoosh(0.35, rng) * 0.12, max(l0 - 0.18, 0))
     mix = vo * 1.0 + mus * 0.55 * duck + sfx
     mix = mix[:int(T * SR)]; mix /= max(1e-6, np.abs(mix).max() / 0.95)
     import soundfile as sf
@@ -560,21 +591,40 @@ def main():
     yy, xx = np.mgrid[-1:1:H * 1j, -1:1:W * 1j]
     vign = Image.fromarray((175 * np.clip((np.sqrt(xx * xx + yy * yy) - 0.75) / 0.7, 0, 1) ** 1.3).astype(np.uint8))
     black = Image.new("RGB", (W, H), (0, 0, 0)); white = Image.new("RGB", (W, H), (255, 255, 255))
+    xg = np.arange(256) / 255.0
+    sc_curve = xg * 0.65 + 0.35 * (3 * xg ** 2 - 2 * xg ** 3)          # gentle S-curve contrast
+    lut_r = np.clip((sc_curve + 0.035 * xg - 0.03 * (1 - xg) ** 2) * 255, 0, 255)
+    lut_g = np.clip((sc_curve + 0.012 * (1 - xg) ** 2) * 255, 0, 255)
+    lut_b = np.clip((sc_curve * 0.97 + 0.05 * (1 - xg) ** 2) * 255, 0, 255)   # teal shadows, warm highlights
+    LUT = [int(v) for v in np.concatenate([lut_r, lut_g, lut_b])]
+    grng = np.random.default_rng(5)
+    grains = [Image.fromarray(np.clip(10 + grng.normal(0, 5, (H // 2, W // 2)), 0, 255).astype(np.uint8)).resize((W, H)).convert("RGB") for _ in range(6)]
+    from PIL import ImageChops
+
+    def zoom_blur(img, amt):
+        out = img
+        for i, sz in enumerate((1 + 0.05 * amt, 1 + 0.10 * amt, 1 + 0.16 * amt)):
+            cw2, ch2 = W / sz, H / sz
+            sc2 = img.resize((W, H), Image.BILINEAR, box=((W - cw2) / 2, (H - ch2) / 2, (W + cw2) / 2, (H + ch2) / 2))
+            out = Image.blend(out, sc2, 1 / (i + 2))
+        return Image.blend(out, white, 0.12 * amt)
+
     char_cache = {}; cache_scene = [-1]
 
-    def char_frame(si, ci, c, act, phase, prog, mouth=0.0):
+    def char_frame(si, ci, c, act, phase, prog, mouth=0.0, bucket=1):
         """Pre-scaled, cropped character image + feet anchor, cached per scene."""
         if cache_scene[0] != si: char_cache.clear(); cache_scene[0] = si
         oneshot = act in ONE_SHOT
         qp = min(int(prog * 40), 16) if oneshot else 0
         qi = 0 if (oneshot and qp < 16) else int(phase * 12) % 12
         qm = int(round(mouth * 3))
-        key = (ci, act, qi, qp, qm)
+        key = (ci, act, qi, qp, qm, bucket)
         if key not in char_cache:
+            while len(char_cache) > 120: char_cache.pop(next(iter(char_cache)))   # bound memory
             _, _, _, sil_c, sun_c = THEMES[scenes[si]["bg"].get("theme", "dusk")]
             im = character(c["who"], act, qi / 12, qp / 40, sil=sil_c, light=lerp(sun_c, (255, 255, 255), 0.2), stripes=c.get("stripes", False), mouth=qm / 3)
             if c.get("flip"): im = ImageOps.mirror(im)
-            f = c.get("h", 0.3) * (H if c.get("anim") == "fly" else BH) / 1000
+            f = c.get("h", 0.3) * (H if c.get("anim") == "fly" else BH) / 1000 * bucket
             im = im.resize((max(1, int(im.width * f)), max(1, int(im.height * f))), Image.LANCZOS)
             bb = im.getbbox() or (0, 0, 1, 1)
             char_cache[key] = (im.crop(bb), COX * f - bb[0], COY * f - bb[1])
@@ -597,6 +647,18 @@ def main():
         while si < len(timeline) - 1 and t >= timeline[si]["end"]: si += 1
         tl, sc = timeline[si], scenes[si]; lt = t - tl["start"]; dur = tl["end"] - tl["start"]
         el = set(sc["bg"].get("el", [])); fx = sc.get("fx", []); static, fgl, custom = statics[si]
+        li = 0
+        for j, ln_ in enumerate(tl["lines"]):
+            if t >= ln_[0]: li = j
+        l0, l1, spk, env = tl["lines"][li]; lprog = min(1.0, max(0.0, (t - l0) / max(l1 - l0, 0.1)))
+        nxt = tl["lines"][li + 1][0] if li + 1 < len(tl["lines"]) else tl["end"]
+        chars_now = sc.get("chars", [])
+        closeup = (spk is not None and not custom and not any(c.get("anim") in ("fly", "grow") for c in chars_now))
+
+        def char_x(c):
+            x = c.get("x", 0.5)
+            if "to" in c: x = x + (c["to"] - x) * min(1.0, lt / (dur * c.get("move", 0.6)))
+            return x
         # Ken Burns + punch zoom + shake
         z = 1 + 0.07 * (lt / dur) + 0.10 * (1 - ease(lt / 0.35))
         if "build" in fx: z += 0.06 * (lt / dur) ** 2
@@ -609,6 +671,17 @@ def main():
         if "build" in fx: shake = max(shake, 10 * (lt / dur) ** 2)
         if shake:
             cx += prng.uniform(-shake, shake); cy += prng.uniform(-shake, shake)
+        if closeup:                                   # cut to a medium close-up of whoever is speaking
+            c = chars_now[spk]; hgt = c.get("h", 0.3) * BH
+            sq = c["who"] == "squirrel"
+            fwd_, up_ = HEAD.get(c["who"], (0.02, 0.84))
+            hx = char_x(c) * BW + (-1 if c.get("flip") else 1) * fwd_ * hgt; hy = c.get("y", 0.95) * BH - hgt * up_
+            ch = max(hgt * (2.6 if sq else 1.75), BH * 0.34) * (1 - 0.05 * ease((t - l0) / max(nxt - l0, 0.1)))
+            ch *= 1 + 0.06 * (1 - ease((t - l0) / 0.12))                 # tiny punch on the cut
+            cw = ch * W / H
+            cx = hx + (-1 if c.get("flip") else 1) * 0.08 * cw; cy = hy + 0.20 * ch
+            if shake: cx += prng.uniform(-shake, shake)
+        cw = min(cw, BW); ch = cw * H / W
         cx = min(max(cx, cw / 2), BW - cw / 2); cy = min(max(cy, ch / 2), BH - ch / 2)
         frame = static.resize((W, H), Image.BILINEAR, box=(cx - cw / 2, cy - ch / 2, cx + cw / 2, cy + ch / 2))
         d = ImageDraw.Draw(frame, "RGBA")
@@ -637,11 +710,14 @@ def main():
                 fgf = fgl.resize((W, H), Image.BILINEAR, box=(cx - cw / 2, cy - ch / 2, cx + cw / 2, cy + ch / 2))
                 frame.paste(fgf, (0, 0), fgf)
             k_ = W / cw; x0, y0 = cx - cw / 2, cy - ch / 2
-            li = 0
-            for j, ln_ in enumerate(tl["lines"]):
-                if t >= ln_[0]: li = j
-            l0, l1, spk, env = tl["lines"][li]; lprog = min(1.0, max(0.0, (t - l0) / max(l1 - l0, 0.1)))
-            for ci, c in enumerate(sc.get("chars", [])):
+            bucket = 2 if k_ > 1.25 else 1
+            order = list(range(len(chars_now)))
+            if closeup: order = [i for i in order if i != spk] + [spk]
+            for ci in order:
+                c = chars_now[ci]
+                if closeup and ci == spk:                 # shallow depth of field: soften everything behind the speaker
+                    sm = frame.resize((W // 4, H // 4), Image.BILINEAR).filter(ImageFilter.GaussianBlur(2.5))
+                    frame = sm.resize((W, H), Image.BILINEAR); d = ImageDraw.Draw(frame, "RGBA")
                 acts = c.get("act", "idle"); act = acts[min(li, len(acts) - 1)] if isinstance(acts, list) else acts
                 x = c.get("x", 0.5); sc_ = 1.0
                 if "to" in c:
@@ -656,7 +732,7 @@ def main():
                 if spk == ci and l0 <= t < l1:
                     mo = float(env[min(int((t - l0) * FPS), len(env) - 1)])
                     if act in ("idle", "namaste"): act = "talk" if c["who"] not in ("squirrel",) else act
-                cim, ax, ay = char_frame(si, ci, c, act, (t / CYCLE.get(act, 2.0)) % 1.0, lprog, mo)
+                cim, ax, ay = char_frame(si, ci, c, act, (t / CYCLE.get(act, 2.0)) % 1.0, lprog, mo, 1 if an == "fly" else bucket)
                 if an == "fly":
                     q = min(1.0, lt / (dur * 0.9)); fx_ = (-0.1 + 1.2 * q) * W; fy_ = (0.85 - 0.75 * math.sin(math.pi * q * 0.9)) * H
                     ty = -(0.75 * math.sin(math.pi * (q + 0.01) * 0.9) - 0.75 * math.sin(math.pi * q * 0.9)) * H
@@ -664,9 +740,9 @@ def main():
                     im2 = cim.rotate(ang - 90, Image.BILINEAR, expand=True)
                     frame.paste(im2, (int(fx_ - im2.width / 2), int(fy_ - im2.height / 2)), im2)
                     continue
-                kk = k_ * sc_
+                kk = k_ * sc_ / bucket
                 im2 = cim.resize((max(1, int(cim.width * kk)), max(1, int(cim.height * kk))), Image.BILINEAR)
-                fxp = (x * BW - x0) * k_; fyp = (c.get("y", 0.95) * BH - y0) * k_
+                fxp = (char_x(c) * BW - x0) * k_; fyp = (c.get("y", 0.95) * BH - y0) * k_
                 frame.paste(im2, (int(fxp - ax * kk), int(fyp - ay * kk)), im2)
             if "leap" in el:
                 p_ = min(1.0, lt / (dur * 0.9)); mask = Image.new("L", (W // 4, H // 4), 0); md = ImageDraw.Draw(mask)
@@ -682,12 +758,17 @@ def main():
             d = ImageDraw.Draw(frame, "RGBA")
             for k in ("embers", "fireflies", "dust", "rain", "leaves"):
                 if k in el: parts[k].draw(d, t)
+            if sc["bg"].get("theme") in ("gold", "fire", "dawn", "dusk", "autumn"):   # drifting warm light leak
+                glow(frame, W * (0.1 + 0.15 * math.sin(t * 0.4)), H * (0.12 + 0.05 * math.cos(t * 0.3)), 700, (255, 150, 60), 0.30)
         frame.paste(black, (0, 0), vign)
+        frame = frame.point(LUT)
+        frame = ImageChops.add(frame, grains[fi % 6], 1.0, -10)
+        to_end = tl["end"] - t
+        if si < len(timeline) - 1 and to_end < 0.16: frame = zoom_blur(frame, 1 - to_end / 0.16)
+        if si > 0 and lt < 0.16: frame = zoom_blur(frame, 1 - lt / 0.16)
         # flash on cut
         if "flash" in fx and lt < 0.5:
             frame = Image.blend(frame, white, 0.85 * (1 - lt / 0.5))
-        if lt < 0.12 and si > 0:
-            frame = Image.blend(frame, black, 0.5 * (1 - lt / 0.12))
         d = ImageDraw.Draw(frame, "RGBA")
         # top tag + progress bar
         d.rectangle([0, 0, W * t / T, 10], fill=(255, 140, 0, 255))
@@ -721,6 +802,8 @@ def main():
         if t > T - 2.6:
             a = ease((t - (T - 2.6)) / 0.4)
             d = ImageDraw.Draw(frame, "RGBA")
+            d.text((W / 2, H * 0.40 - 40 * (1 - a)), "जय श्री राम", font=FEND, fill=(255, 200, 70, int(255 * a)), anchor="mm",
+                   stroke_width=8, stroke_fill=(60, 20, 0, int(255 * a)))
             pill(d, W / 2, H * 0.78, story.get("outro", ""), FOUT, (255, 255, 255, int(255 * a)), (200, 60, 20, int(230 * a)))
         if preview:
             frame.save(os.path.join(HERE, ".cache", f"preview_{name}_{shots[fi]}.png")); continue
