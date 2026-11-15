@@ -1,0 +1,4 @@
+.preview/
+.cache/
+__pycache__/
+missing_train_shots_*.mp4
