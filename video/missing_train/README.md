@@ -28,11 +28,25 @@ A cinematic Hindi short film, about 7 minutes long, 1920×1080 (16:9) with lette
 - माँ: female.
 - Station and train announcements: an old loudspeaker sound with echo.
 
+**Editing:**
+
+- Cuts and crossfades, dips to black between scenes, and lightning flashes.
+- Camera push-ins and pans, handheld drift, and a jolt shake.
+- Letterbox (2.4:1), colour grading for each scene (cold night, warm lamp light, sepia memory, dawn), film grain and a vignette.
+
+**Mix:**
+
+- Stereo. Rain and train ambience are wide; voices are in the centre.
+- Effects follow the action: the train arrives from right to left and leaves to the right, the station master runs in from the left, and the far-off train crosses the frame in the epilogue.
+- Music and ambience drop under the dialogue.
+- Mastered to −14 LUFS (the YouTube/streaming standard) with a −1.5 dBTP true-peak limit.
+
 **Subtitles:** Hindi, in the bottom letterbox bar, with each speaker's name in their own colour.
 
 **Sound:**
 
-- Rain, thunder, a clock ticking, the train's rumble and rail clacks, steam puffs, the whistle, brakes, the door slam, a sting on each reveal, and morning birds.
+- Wet footsteps, a lantern creak, a heartbeat that speeds up, reversed swells into each reveal, cinematic hits.
+- Rain, thunder (near and far), a clock ticking, the train's rumble and rail clacks, steam puffs, the whistle, brakes, the door slam, a sting on each reveal, and morning birds.
 - Music: a dark drone and a heartbeat for the mystery, and a sad piano theme in D minor for the memories.
 - At the end, a warm piano theme in D major.
 
@@ -67,7 +81,8 @@ Everything about the film is in `story.json`, one entry per shot:
 - **Sound:**
   - `amb` sets the ambience: `rain`, `rain_in`, `rumble`, `cab`, `tick`, `birds`, `wind`.
   - `music` sets the music: `drone`, `heart`, `tension`, `sad`, `warm`.
-  - `sfx` is a list of `[name, time, volume]`. The names are in `sound.py`.
+  - `sfx` is a list of `[name, time, volume, pan]`. The pan is −1 (left) to 1 (right), or `[from, to]` to sweep. The names are in `sound.py`.
+- **Transitions:** `xfade` crossfades from the previous shot, in seconds.
 
 The files:
 

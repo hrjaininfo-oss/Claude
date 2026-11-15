@@ -481,10 +481,19 @@ def frame(fi):
     t = fi / FPS
     i = max(0, bisect.bisect_right(STARTS, t) - 1)
     c = SHOTS[i]
-    img = render(c, t - c.start, fi)
+    tl = t - c.start
+    img = render(c, tl, fi)
+    xf = c.sh.get("xfade", 0)
+    if xf and i > 0 and tl < xf:
+        p = SHOTS[i - 1]
+        prev = render(p, p.dur + tl, fi)
+        img = Image.blend(prev, img, ease3(tl / xf))
     for s, e, who, text in SUBS:
-        if s <= t <= e:
+        if s - 0.15 <= t <= e:
+            a = min(1.0, (t - s + 0.15) / 0.15, (e - t) / 0.2)
             si = sub_img(who, text)
+            if a < 0.999:
+                si = si.copy(); si.putalpha(si.getchannel("A").point(lambda v: int(v * a)))
             img.paste(si, (0, int(H - BAR / 2 - si.height / 2)), si)
     return img
 
@@ -512,6 +521,8 @@ def bed_gains(shots, key, n):
 
 
 def make_audio(shots, vo, T):
+    """Stereo mix: voices centre, ambience wide (decorrelated L/R), music widened,
+    effects panned to follow the action, voice ducking, soft limiting."""
     n = int(T * SR) + SR
     rng = np.random.default_rng(42)
     vox = np.zeros(n, np.float32)
@@ -523,16 +534,27 @@ def make_audio(shots, vo, T):
     env = np.zeros(n, np.float32)
     env[k // 2:k // 2 + len(cs) - k] = (cs[k:] - cs[:-k]) / k
     duck = 1 - 0.55 * np.clip(env / 0.04, 0, 1)
-    mix = vox * 1.0
+    mix = np.stack([vox, vox], 1)
     for nm, g in bed_gains(shots, "amb", n).items():
-        mix += sound.AMB[nm](n, rng)[:n] * g * 0.42 * (0.55 + 0.45 * duck)
+        L = sound.AMB[nm](n, np.random.default_rng(100 + len(nm)))[:n]
+        R = sound.AMB[nm](n, np.random.default_rng(200 + len(nm)))[:n]
+        gg = g * 0.42 * (0.55 + 0.45 * duck)
+        mix[:, 0] += L * gg; mix[:, 1] += R * gg
     for nm, g in bed_gains(shots, "music", n).items():
-        mix += sound.MUSIC[nm](n, rng)[:n] * g * 0.5 * duck
+        m = sound.MUSIC[nm](n, rng)[:n] * g * 0.5 * duck
+        d = int(0.011 * SR)
+        mix[:, 0] += m; mix[:, 1] += np.concatenate([np.zeros(d, np.float32), m[:-d]]) * 0.92 + m * 0.08
     for c in shots:
         for ev in c.sh.get("sfx", []):
             nm, at = ev[0], c.t(ev[1]) + c.start
             gg = ev[2] if len(ev) > 2 else 0.8
-            sound.add(mix, sound.SFX[nm](rng), at, gg)
+            p = ev[3] if len(ev) > 3 else 0.0
+            p0, p1 = (p, p) if not isinstance(p, list) else p
+            sig = sound.pan(sound.SFX[nm](rng), p0, p1)
+            i = int(at * SR)
+            if i < 0: sig, i = sig[-i:], 0
+            m_ = min(len(sig), n - i)
+            if m_ > 0: mix[i:i + m_] += sig[:m_] * gg
     mix = np.tanh(mix * 1.1) / np.tanh(1.1)
     mix = mix / max(1e-6, np.abs(mix).max()) * 0.95
     return mix[:int(T * SR)].astype(np.float32)
@@ -583,7 +605,7 @@ def main():
     print(f"Video: {len(frames)} frames with {args.jobs} workers ...")
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS),
            "-i", "-", "-i", wav, "-c:v", "libx264", "-preset", "medium", "-crf", "23", "-maxrate", "1500k",
-           "-bufsize", "3000k", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-ar", "48000",
+           "-bufsize", "3000k", "-pix_fmt", "yuv420p", "-af", "loudnorm=I=-14:TP=-1.5:LRA=11", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2",
            "-shortest", "-movflags", "+faststart", out]
     p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
     st = time.time()

@@ -379,3 +379,95 @@ def pa(a):
     x = band(a, 350, 3400)
     x = np.tanh(norm(x, 1.0) * 2.2) * 0.8
     return reverb(x.astype(np.float32), 0.55, 1.4, echo=0.35, dly=0.38)
+
+
+# ---------------------------------------------------------------- extra effects (editing pass)
+def wet_steps(rng, d=3.0, rate=1.9):
+    """Footsteps on a wet platform: heel thump + splash."""
+    out = np.zeros(int(d * SR) + SR, np.float32)
+    L = int(0.18 * SR); t_ = np.arange(L) / SR
+    t = 0.0
+    while t < d:
+        thump = np.sin(2 * np.pi * (70 + 40 * np.exp(-t_ * 40)) * t_) * np.exp(-t_ * 45)
+        splash = band(rng.standard_normal(L).astype(np.float32), 1200, 7000) * np.exp(-t_ * 22) * 0.6
+        add(out, (thump + splash).astype(np.float32), t, rng.uniform(0.6, 1.0))
+        t += 1 / rate * rng.uniform(0.93, 1.07)
+    return norm(reverb(out, 0.25, 0.4)[:len(out)], 0.6)
+
+
+def reverse_swell(rng, d=2.2):
+    """Reversed cymbal/noise swell that sucks into a cut."""
+    n = int(d * SR); t = np.arange(n) / SR
+    s = band(rng.standard_normal(n).astype(np.float32), 2500, 10000) * np.exp(-t * 2.2)
+    s += sum(np.sin(2 * np.pi * f * t) for f in (311, 466, 622)) * 0.08 * np.exp(-t * 2.5)
+    s = reverb(s.astype(np.float32), 0.5, 0.8)[:n][::-1]
+    return norm(s.copy(), 0.8)
+
+
+def hit(rng):
+    """Cinematic impact: sub drop + noise crack + long tail."""
+    n = int(5 * SR); t = np.arange(n) / SR
+    sub = np.sin(2 * np.pi * np.cumsum(28 + 70 * np.exp(-t * 4)) / SR) * np.exp(-t * 0.9)
+    crack = band(rng.standard_normal(n).astype(np.float32), 300, 9000) * np.exp(-t * 18)
+    metal = sum(np.sin(2 * np.pi * f * t) for f in (180, 263, 397)) / 3 * np.exp(-t * 1.6)
+    return norm(reverb((sub + crack * 0.7 + metal * 0.35).astype(np.float32), 0.45, 1.6)[:n], 1.0)
+
+
+def thunder_far(rng):
+    n = int(7 * SR); t = np.arange(n) / SR
+    roll = band(rng.standard_normal(n).astype(np.float32), 20, 160) * np.minimum(t / 0.8, 1) * np.exp(-t * 0.55)
+    return norm(roll, 0.8)
+
+
+def heartbeat_build(rng, d=6.0):
+    out = np.zeros(int(d * SR) + SR, np.float32)
+    L = int(0.35 * SR); t_ = np.arange(L) / SR
+    k = (np.sin(2 * np.pi * np.cumsum(45 + 60 * np.exp(-t_ * 30)) / SR) * np.exp(-t_ * 14)).astype(np.float32)
+    t = 0.0
+    while t < d:
+        p = t / d
+        add(out, k, t, 0.4 + 0.6 * p); add(out, k * 0.7, t + 0.26 - 0.08 * p, 0.4 + 0.6 * p)
+        t += 1.0 - 0.5 * p
+    return norm(out, 0.9)
+
+
+def creak(rng, d=1.3):
+    n = int(d * SR); t = np.arange(n) / SR
+    f = 95 + 40 * np.sin(2 * np.pi * 0.8 * t) + 15 * np.sin(2 * np.pi * 3.1 * t)
+    ph = np.cumsum(f) / SR
+    s = np.sign(np.sin(2 * np.pi * ph)) * (np.sin(2 * np.pi * ph * 7) ** 2)
+    s = band(s.astype(np.float32), 300, 3000) * env(n, min(0.1, d / 4), min(0.4, d / 3))
+    return norm(s, 0.5)
+
+
+def lantern(rng, d=2.5):
+    """Lantern handle squeak swinging."""
+    out = np.zeros(int(d * SR), np.float32)
+    for k in range(int(d / 0.9)):
+        add(out, creak(rng, 0.35) * 0.6, k * 0.9 + rng.uniform(0, 0.1))
+    return norm(out, 0.4)
+
+
+def tick_tock(rng, d=6.0):
+    return ticks(int(d * SR), rng)
+
+
+def train_pass_far(rng, d=12.0):
+    """Distant train rumble with clacks, for the epilogue."""
+    n = int(d * SR)
+    r = rumble(n, rng, 0.7)
+    e = np.sin(np.pi * np.arange(n) / n) ** 2
+    return norm(band(r, 40, 2500) * e, 0.5)
+
+
+SFX.update({"wet_steps": wet_steps, "wet_run": lambda r: wet_steps(r, 2.0, 3.6), "swell": reverse_swell, "hit": hit,
+            "thunder_far": thunder_far, "heartbeat": heartbeat_build, "creak": creak, "lantern": lantern,
+            "tick": tick_tock, "train_far": train_pass_far})
+
+
+def pan(sig, p0, p1=None):
+    """Equal-power pan from p0 to p1 (-1 left .. 1 right) -> (n, 2)."""
+    p1 = p0 if p1 is None else p1
+    p = np.linspace(p0, p1, len(sig))
+    a = (p + 1) * np.pi / 4
+    return np.stack([sig * np.cos(a), sig * np.sin(a)], 1).astype(np.float32) * 1.414
