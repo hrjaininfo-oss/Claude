@@ -1,2 +1,5 @@
 node_modules/
 out/
+audio/.models/
+audio/.cache/
+__pycache__/

@@ -1,58 +1,71 @@
 # Room No. 4 — 90 s vertical horror short (Remotion)
 
-1080×1920, 30 fps, 90 s. Dark illustrated style (silhouettes and shadows only), burned-in Hinglish subtitles, **no audio** (tracks are left empty for your music and voiceover).
+1080×1920, 30 fps, 90 s, with voices, sound effects and music. Coloured 2D characters with real faces, expressions,
+blinking, lip-sync to the voice track, walk cycles and posable arms. 28 shots edited with cuts, whips, flashes and crash zooms.
 
-## Run
+## Make the video
 
 ```bash
 npm install
-npm run studio          # live preview / scrub in the browser
-npm run render          # → out/room4.mp4
-npm run still -- --frame=2220   # single frame (here 1:14, the "1987" close-up)
+pip install numpy scipy soundfile kokoro-onnx      # for the sound
+python3 audio/build_audio.py                       # voices + SFX + music + lip-sync data
+npm run studio                                     # preview and scrub
+npm run render                                     # → out/room4.mp4
 ```
 
-If Remotion can't download its own headless Chrome (offline / firewalled machine), point it at a local one:
+- The first `build_audio.py` run downloads the offline Hindi voice model (about 350 MB) into `audio/.models/`. It also needs `ffmpeg`.
+- If Remotion can't download its headless Chrome, point it at a local one: `REMOTION_BROWSER=/path/to/chrome-headless-shell npm run render`.
 
-```bash
-REMOTION_BROWSER=/path/to/chrome-headless-shell npm run render
-```
+## How it fits together
 
-## Where things live
-
-| File | What it controls |
+| File | What it does |
 |---|---|
-| `src/timeline.ts` | **All timings**: scene start/end, every subtitle line, on-screen titles, story beats (knocks, door push, black-out), audio slots |
-| `src/Room4.tsx` | Assembles scenes → vignette + grain → titles → subtitles → audio |
-| `src/scenes/Scene1Hook.tsx` … `Scene7Twist.tsx` | One component per scene |
-| `src/components/fx.tsx` | Camera (push/pan/shake), flicker, torch darkness, dust, grain, vignette, glitch |
-| `src/components/props.tsx` | Silhouettes, Room 4 door (shaking handle, swing-open), lantern, corridor |
-| `src/components/haveli.tsx` | Haveli and tree silhouettes |
-| `src/components/text.tsx` | Subtitle styles (dialogue / whisper / sfx / glitch), typewriter titles, audio tracks |
+| `src/story.json` | **The script.** Each dialogue line: start/end, speaker, Hinglish subtitle text, Devanagari text for the voice, and style (`aside`, `whisper`, `glitch`). Also titles, story beats (knocks, door push, black-out) and walk timings for footsteps. Both the video and the audio read this file. |
+| `audio/build_audio.py` | Builds `public/audio/dialogue.mp3`, `sfx.mp3`, `music.mp3` (plus `mix.mp3`) and `src/generated/lipsync.json` |
+| `src/shots/act1.tsx` … `act3.tsx` | The edit: every shot with its time range, incoming transition and camera move |
+| `src/rig/Character.tsx` | The character rig: front, side and back views, expressions, auto-blink, lip-sync, walk cycle, arms holding props, half-lit lighting |
+| `src/rig/looks.ts` | How Rahul, Karan and Vikram look (skin, hair, clothes, glasses, mustache, shawl) |
+| `src/sets/sets.tsx` | Night sky, road with car, haveli, scrolling corridor, guest room, dusty room and the 1987 photo |
+| `src/components/fx.tsx` | Camera moves and shake, flicker, torch beam, dust, grain, vignette, glitch |
 
-Each scene is also registered as its own composition (`Scene1-hook` … `Scene7-twist`) for quick previewing in Studio.
+## Shot list
 
-| Scene | Time | Shots |
+| Time | Shot | Sound |
 |---|---|---|
-| 1 Hook | 0:00–0:08 | Door close-up, three knocks shake it, typewriter "Never open room number 4." |
-| 2 Arrival | 0:08–0:20 | Headlights on dirt road → haveli with single lantern, Vikram at gate, Karan whispers |
-| 3 Warning | 0:20–0:32 | Corridor walk → stop at door 4, Vikram walks away and takes the light |
-| 4 Night | 0:32–0:48 | 2:13 AM clock insert → dark room, knocks shake camera, feet shadow under door, Karan sits up |
-| 5 Door | 0:48–1:05 | Torch-beam POV down corridor → handle rattles, silence, door creaks open |
-| 6 Reveal | 1:05–1:20 | Torch sweeps empty room → sepia photo of three men → crash zoom on "1987" |
-| 7 Twist | 1:20–1:30 | Vikram half-lit in doorway, glitch on his line, torch flickers, black-out, "Part 2?" |
+| 0:00 | Door 4 close-up, three knocks, a shadow passes under the door, title types on | Knocks, low boom, music-box lullaby |
+| 0:08 | Car on the dirt road (moving background and trees) | Engine, gravel, wind, crickets |
+| 0:11.5 | Haveli wide, car pulls in, headlights off, Vikram at the gate with a lantern | Skid, car doors, footsteps |
+| 0:13.6 | Vikram waves: "Aa gaye tum dono? Bahut saal ho gaye." | Voice + lip-sync |
+| 0:16.5 | Two-shot: Karan leans in and whispers, Rahul's eyes shift | Whispered aside |
+| 0:20 | Side tracking shot: Vikram leads with the lantern, all three walking | Footsteps in step with the walk |
+| 0:24.5 | Vikram close-up at Room 4: the warning | Low boom, creak |
+| 0:28.2 | Rahul close-up: "Kyun? What's inside?" | |
+| 0:30 | Vikram walks away and the light leaves with him | Footsteps fading |
+| 0:32 | 2:13 AM clock | Ticks |
+| 0:35.5 | Both asleep, three knocks, Karan's eyes open | Knocks, room tone |
+| 0:40 | Feet shadow under the door: "Rahul… Karan…" | Ghost whisper (left/right) |
+| 0:44.2 | Karan bolts upright: "Tune suna?" | Boom, breathing, heartbeat |
+| 0:48 | Dark corridor: Rahul with phone torch, Karan clutching him | Wooden floor creaks, heartbeat speeding up |
+| 0:52 | Torch POV: whisper "Rahul…" stops at door 4 | Riser |
+| 0:56 | Handle rattles (extreme close-up) | Metal rattle, then sudden silence |
+| 0:59 | Karan: "Mat khol, Rahul!" | |
+| 1:01.4 | Rahul profile, reaching for the door | Silence |
+| 1:02.4 | Door creaks open into black | Long creak |
+| 1:05 | Torch sweeps the empty room | Room tone |
+| 1:10.5 | Photo found: the same three faces in sepia | Boom + string stinger |
+| 1:14 | Crash zoom on "1987" | Whoosh + hit |
+| 1:16.4 | Faces lit from below: "Yeh… hum hain?" | Dissonant strings |
+| 1:20 | They turn their heads towards a sound behind them | Floorboard creak |
+| 1:21.2 | Vikram in the doorway, half his face in shadow | Sub drop |
+| 1:23.5 | Vikram extreme close-up: "Tum log wapas aa gaye." | Glitched voice |
+| 1:26.8 | Torch flickers, cutting between the friends and Vikram | Electrical buzz |
+| 1:27.9 | Black, then "Part 2?" | Silence, then final hit and lullaby |
 
-## Adding audio
+## Changing things
 
-Put files in `public/audio/` and set them in `src/timeline.ts`:
+- **Words or timing:** edit `src/story.json`, run `python3 audio/build_audio.py`, then render. Subtitles and mouth movement follow the new voice automatically.
+- **Your own voiceover or music:** replace `public/audio/dialogue.mp3` or `music.mp3` (keep the 90 s length), or set a stem's `src` to `null` in `src/timeline.ts`. If you replace the dialogue, keep each line at the same start time: the mouths still move to the generated voice timing in `src/generated/lipsync.json`.
+- **Voices:** set them under `voices` in `story.json` (`hm_omega` or `hm_psi` for male, `hf_alpha` or `hf_beta` for female), with `speed` and `pitch` in semitones.
+- **Rig preview:** the `RigTest` and `FaceTest` compositions in Studio show every view and expression.
 
-```ts
-export const AUDIO = {
-  music: { src: 'audio/bg-music.mp3', volume: 0.6 },
-  voiceover: { src: 'audio/voiceover.wav', volume: 1 },
-  sfx: [{ src: 'audio/knock.wav', startAt: 1.4 }],
-};
-```
-
-Story beats in `BEATS` (e.g. `hookKnocks: [1.4, 2.1, 2.8]`, `doorPushOpen: 62.4`) give you the exact SFX timings. If the voiceover is paced differently, move the matching `SUBTITLES` lines.
-
-Fonts (Special Elite, Caveat, Inter; SIL OFL) are bundled in `public/fonts/`.
+Fonts (Special Elite, Caveat, Inter; SIL OFL) are in `public/fonts/`. All the sound is generated by `build_audio.py`, so there are no third-party audio files.

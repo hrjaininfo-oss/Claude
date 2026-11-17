@@ -1,0 +1,51 @@
+{
+  "fps": 30,
+  "duration": 90,
+  "voices": {
+    "vikram": { "voice": "hm_omega", "speed": 0.9, "pitch": -2.0 },
+    "rahul": { "voice": "hm_psi", "speed": 1.0, "pitch": 0.0 },
+    "karan": { "voice": "hm_psi", "speed": 1.05, "pitch": 2.2 },
+    "ghost": { "voice": "hm_omega", "speed": 0.72, "pitch": -3.0 }
+  },
+  "lines": [
+    { "id": "L1", "speaker": "vikram", "start": 13.8, "end": 16.4, "text": "Aa gaye tum dono? Bahut saal ho gaye.", "tts": "आ गए तुम दोनों? बहुत साल हो गए।", "space": "outdoor" },
+    { "id": "L2", "speaker": "karan", "start": 16.8, "end": 19.7, "text": "Bahut saal? We met him last month…", "tts": "बहुत साल? वी मेट हिम लास्ट मंथ।", "style": "aside", "space": "outdoor" },
+    { "id": "L3", "speaker": "vikram", "start": 24.7, "end": 28.1, "text": "Ghar mein kahin bhi jao. Bas yeh kamra… kabhi mat kholna.", "tts": "घर में कहीं भी जाओ। बस यह कमरा... कभी मत खोलना।", "space": "hall" },
+    { "id": "L4", "speaker": "rahul", "start": 28.35, "end": 29.95, "text": "Kyun? What's inside?", "tts": "क्यों? व्हाट्स इनसाइड?", "space": "hall" },
+    { "id": "L5", "speaker": "vikram", "start": 30.15, "end": 31.9, "text": "Khana lag gaya hai.", "tts": "खाना लग गया है।", "space": "hall" },
+    { "id": "L6", "speaker": "ghost", "start": 40.3, "end": 43.8, "text": "Rahul… Karan…", "tts": "राहुल... करन...", "style": "whisper", "space": "hall" },
+    { "id": "L7", "speaker": "karan", "start": 44.9, "end": 46.6, "text": "Tune suna?", "tts": "तूने सुना?", "style": "aside", "space": "room" },
+    { "id": "L7b", "speaker": "ghost", "start": 52.4, "end": 55.2, "text": "Rahul…", "tts": "राहुल...", "style": "whisper", "space": "hall" },
+    { "id": "L8", "speaker": "karan", "start": 59.1, "end": 61.2, "text": "Mat khol, Rahul!", "tts": "मत खोल, राहुल!", "space": "hall" },
+    { "id": "L9", "speaker": "rahul", "start": 76.4, "end": 79.6, "text": "Yeh… hum hain?", "tts": "ये... हम हैं?", "space": "room" },
+    { "id": "L10", "speaker": "vikram", "start": 83.5, "end": 86.6, "text": "Tum log wapas aa gaye.", "tts": "तुम लोग वापस आ गए।", "style": "glitch", "space": "room" }
+  ],
+  "titles": [
+    { "start": 3.2, "end": 7.9, "text": "Never open room number 4." },
+    { "start": 88.1, "end": 90.0, "text": "Part 2?" }
+  ],
+  "beats": {
+    "hookKnocks": [1.4, 2.1, 2.8],
+    "carStop": 12.6,
+    "headlightsOff": 13.0,
+    "carDoors": [13.15, 13.4],
+    "nightKnocks": [36.2, 37.4, 38.6],
+    "karanEyesOpen": 37.4,
+    "karanSitsUp": 44.2,
+    "handleShakeStart": 56.0,
+    "silenceBeforePush": 61.9,
+    "doorPushOpen": 62.4,
+    "photoFound": 70.5,
+    "yearHit": 74.0,
+    "turnAround": 80.2,
+    "vikramAppears": 81.2,
+    "torchFlickerStart": 86.8,
+    "blackOut": 87.9
+  },
+  "walks": [
+    { "from": 20.0, "to": 24.5, "step": 0.5, "surface": "stone", "who": 3 },
+    { "from": 30.5, "to": 32.0, "step": 0.5, "surface": "stone", "who": 1 },
+    { "from": 48.0, "to": 52.0, "step": 0.62, "surface": "wood", "who": 2 },
+    { "from": 52.0, "to": 55.6, "step": 0.66, "surface": "wood", "who": 1 }
+  ]
+}

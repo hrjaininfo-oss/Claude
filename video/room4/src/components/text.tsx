@@ -1,14 +1,24 @@
 import React from 'react';
 import { AbsoluteFill, Audio, Sequence, interpolate, random, staticFile, useCurrentFrame } from 'remotion';
 import { FONT_SUB, FONT_TITLE } from '../fonts';
-import { AUDIO, ON_SCREEN_TEXT, SUBTITLES, Subtitle, sec } from '../timeline';
+import { AUDIO, TITLES, sec } from '../timeline';
+import story from '../story.json';
+import { LINES } from '../time';
+import { SPEAKER_COLOR as SC } from '../rig/looks';
+
+type SubtitleStyle = 'dialogue' | 'whisper' | 'sfx' | 'glitch' | 'aside';
+type Subtitle = { start: number; end: number; speaker?: string; text: string; style?: SubtitleStyle };
+const NAMES: Record<string, string> = { vikram: 'Vikram', rahul: 'Rahul', karan: 'Karan' };
+/** Subtitles follow the real voice timing (from lipsync.json), held a little after the voice ends. */
+const SUBTITLES: Subtitle[] = story.lines.map((l) => {
+  const real = LINES.find((x) => x.id === l.id);
+  const end = Math.min(l.end, (real?.end ?? l.end) + 0.6);
+  return { start: l.start, end, speaker: NAMES[l.speaker], text: l.text, style: (l as { style?: SubtitleStyle }).style ?? 'dialogue' };
+});
+const ON_SCREEN_TEXT = TITLES;
 import { GlitchLayer } from './fx';
 
-const SPEAKER_COLOR: Record<string, string> = {
-  Vikram: '#ffb347',
-  Rahul: '#8fd3ff',
-  Karan: '#b9f18c',
-};
+const SPEAKER_COLOR: Record<string, string> = { Vikram: SC.vikram, Rahul: SC.rahul, Karan: SC.karan };
 
 const SubtitleCard: React.FC<{ sub: Subtitle }> = ({ sub }) => {
   const frame = useCurrentFrame(); // local to the subtitle's Sequence
@@ -20,7 +30,7 @@ const SubtitleCard: React.FC<{ sub: Subtitle }> = ({ sub }) => {
   const pop = interpolate(frame, [0, 6], [0.92, 1], { extrapolateRight: 'clamp' });
 
   const isSfx = style === 'sfx';
-  const isWhisper = style === 'whisper';
+  const isWhisper = style === 'whisper' || style === 'aside';
   const isGlitch = style === 'glitch';
 
   const glitchAmount = isGlitch ? (random(`gsub-${Math.floor(frame / 4)}`) > 0.35 ? 1 : 0.15) : 0;
@@ -135,15 +145,11 @@ export const OnScreenText: React.FC = () => (
   </>
 );
 
-/** Audio placeholders — render nothing until files are set in timeline.ts → AUDIO. */
+/** Audio stems built by audio/build_audio.py. */
 export const AudioTracks: React.FC = () => (
   <>
+    {AUDIO.dialogue.src && <Audio src={staticFile(AUDIO.dialogue.src)} volume={AUDIO.dialogue.volume} />}
+    {AUDIO.sfx.src && <Audio src={staticFile(AUDIO.sfx.src)} volume={AUDIO.sfx.volume} />}
     {AUDIO.music.src && <Audio src={staticFile(AUDIO.music.src)} volume={AUDIO.music.volume} />}
-    {AUDIO.voiceover.src && <Audio src={staticFile(AUDIO.voiceover.src)} volume={AUDIO.voiceover.volume} />}
-    {AUDIO.sfx.map((s, i) => (
-      <Sequence key={i} from={sec(s.startAt)} name={`SFX ${s.src}`}>
-        <Audio src={staticFile(s.src)} volume={s.volume ?? 1} />
-      </Sequence>
-    ))}
   </>
 );
