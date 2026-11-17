@@ -457,7 +457,7 @@ def build():
         while t < w["to"]:
             for j in range(w["who"]):
                 pan = -0.5 + j * 0.5 if w["who"] > 1 else 0
-                sfx.add(reverb(footstep(w["surface"]), 1.6, 0.35, seed=3), t + j * 0.13, 0.55 if w["who"] > 1 else 0.7, pan)
+                sfx.add(reverb(footstep(w["surface"]), 1.6, 0.35, seed=3), t + j * 0.13, 0.55 if w["who"] > 1 else (0.35 if 52 <= t < 56 else 0.7), pan)
             t += w["step"]; k += 1
 
     # ---------- warning
@@ -517,7 +517,7 @@ def build():
         mus.add(heartbeat(0.8), hb, 0.8); hb += 0.9
     hb, period = 50.0, 0.85
     while hb < B["silenceBeforePush"] - 0.3:
-        mus.add(heartbeat(1.0), hb, 0.9); hb += period; period = max(0.36, period * 0.94)
+        mus.add(heartbeat(1.0), hb, 0.45 if 52 <= hb < 55.4 else 0.9); hb += period; period = max(0.36, period * 0.94)
     mus.add(drone(9.5, 34.6, 700, 0.3), B["photoFound"], 0.6)
     mus.add(strings_cluster(9, [74, 75, 80, 86], 3000), B["photoFound"], 0.35)
     mus.add(drone(B["blackOut"] - 80, 32.7, 300, 0.4), 80, 0.75)
