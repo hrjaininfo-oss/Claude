@@ -1,0 +1,23 @@
+{
+  "name": "room4-horror-short",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Room No. 4 — 90s vertical horror short built with Remotion",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render Room4 out/room4.mp4",
+    "still": "remotion still Room4 out/still.png",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.544",
+    "@remotion/fonts": "4.0.544",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.544"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.12",
+    "typescript": "5.6.3"
+  }
+}
